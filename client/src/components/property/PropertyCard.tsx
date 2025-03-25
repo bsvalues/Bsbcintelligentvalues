@@ -1,160 +1,184 @@
 /**
  * PropertyCard Component
  * 
- * A card for displaying property information with adaptive styling based on property type.
+ * Displays property information in a card format
  */
-
-import React from 'react';
-import { Link } from 'wouter';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import PropertyTypeBadge from './PropertyTypeBadge';
-import PropertyIcon from './PropertyIcon';
-import { getPropertyColorScheme, getPropertyTypeLabel } from '@/utils/propertyColorSchemes';
+import { PropertyListing } from '../../types/propertyTypes';
+import { Home, MapPin, Ruler, Calendar, DollarSign, Building } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface PropertyCardProps {
-  property: {
-    id: string;
-    address: string;
-    price: number;
-    bedrooms: number;
-    bathrooms: number;
-    squareFeet: number;
-    propertyType?: string;
-    yearBuilt?: number;
-    photos?: string[];
-    listingDate?: string;
-  };
-  variant?: 'default' | 'compact' | 'featured';
-  className?: string;
+  property: PropertyListing;
+  showActions?: boolean;
+  variant?: 'default' | 'compact';
 }
 
-/**
- * PropertyCard displays property information with styling based on property type
- */
-export default function PropertyCard({
-  property,
-  variant = 'default',
-  className = ''
-}: PropertyCardProps) {
-  const { 
-    id, 
-    address, 
-    price, 
-    bedrooms, 
-    bathrooms, 
-    squareFeet, 
-    propertyType = 'not_specified',
-    yearBuilt,
-    photos,
-    listingDate
-  } = property;
+export function PropertyCard({ property, showActions = true, variant = 'default' }: PropertyCardProps) {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
   
-  const colorScheme = getPropertyColorScheme(propertyType);
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
   
-  // Format price with commas
-  const formattedPrice = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
-  }).format(price);
-  
-  // Format square feet with commas
-  const formattedSqFt = new Intl.NumberFormat('en-US').format(squareFeet);
-  
-  return (
-    <Card 
-      className={`group overflow-hidden transition-all duration-300 hover:shadow-md ${className}`}
-      style={{
-        borderColor: variant === 'featured' ? colorScheme.primary : undefined,
-        borderWidth: variant === 'featured' ? '2px' : undefined
-      }}
-    >
-      {/* Card Header with Property Image */}
-      <CardHeader className="p-0 relative">
-        <div 
-          className="w-full aspect-video bg-gray-200 relative overflow-hidden"
-          style={{
-            background: photos && photos.length > 0 
-              ? `url(${photos[0]}) center/cover no-repeat` 
-              : colorScheme.gradient
-          }}
-        >
-          {/* If no photo, show property icon */}
-          {(!photos || photos.length === 0) && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              <PropertyIcon propertyType={propertyType} size="xl" variant="solid" className="text-white" />
+  if (variant === 'compact') {
+    return (
+      <Card className="h-full overflow-hidden">
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-base truncate">{property.address}</CardTitle>
+          <CardDescription className="flex items-center text-xs">
+            <MapPin className="h-3 w-3 mr-1" />
+            {property.neighborhood || property.city || 'N/A'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 pt-0 pb-2">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center">
+              <Home className="h-3 w-3 mr-1" />
+              <span>{property.bedrooms} bd | {property.bathrooms} ba</span>
             </div>
+            <div className="flex items-center">
+              <Ruler className="h-3 w-3 mr-1" />
+              <span>{property.squareFeet.toLocaleString()} sqft</span>
+            </div>
+            <div className="flex items-center">
+              <Calendar className="h-3 w-3 mr-1" />
+              <span>Built {property.yearBuilt || 'N/A'}</span>
+            </div>
+            <div className="flex items-center">
+              <Building className="h-3 w-3 mr-1" />
+              <span>{property.propertyType || 'Residential'}</span>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="p-4 pt-2 flex justify-between items-center">
+          <div className="font-semibold">{formatCurrency(property.price)}</div>
+          {property.status && (
+            <Badge variant={
+              property.status === 'active' ? 'default' :
+              property.status === 'pending' ? 'secondary' :
+              property.status === 'sold' ? 'outline' : 'destructive'
+            }>
+              {property.status}
+            </Badge>
           )}
-          
-          {/* Overlay with property type badge */}
-          <div className="absolute top-2 left-2">
-            <PropertyTypeBadge propertyType={propertyType} />
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  // Default variant (full size)
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl">{property.address}</CardTitle>
+            <CardDescription className="flex items-center mt-1">
+              <MapPin className="h-4 w-4 mr-1" />
+              {[
+                property.neighborhood,
+                property.city,
+                property.state,
+                property.zipCode
+              ].filter(Boolean).join(', ') || 'Location not available'}
+            </CardDescription>
           </div>
-          
-          {/* Price badge */}
-          <div 
-            className="absolute bottom-0 right-0 py-1 px-3 text-white font-bold"
-            style={{ backgroundColor: colorScheme.primary }}
-          >
-            {formattedPrice}
-          </div>
+          {property.status && (
+            <Badge variant={
+              property.status === 'active' ? 'default' :
+              property.status === 'pending' ? 'secondary' :
+              property.status === 'sold' ? 'outline' : 'destructive'
+            }>
+              {property.status}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       
-      {/* Card Content */}
-      <CardContent className={variant === 'compact' ? 'p-3' : 'p-4'}>
-        <h3 className="font-semibold text-lg mb-2 line-clamp-1">{address}</h3>
-        
-        {/* Property details grid */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="text-center">
-            <div className="text-sm text-gray-500">Beds</div>
-            <div className="font-medium">{bedrooms}</div>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Price</p>
+            <p className="font-semibold text-lg">{formatCurrency(property.price)}</p>
           </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-500">Baths</div>
-            <div className="font-medium">{bathrooms}</div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Property Type</p>
+            <p>{property.propertyType || 'Residential'}</p>
           </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-500">Sq Ft</div>
-            <div className="font-medium">{formattedSqFt}</div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Year Built</p>
+            <p>{property.yearBuilt || 'N/A'}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Listing Date</p>
+            <p>{formatDate(property.listingDate)}</p>
           </div>
         </div>
         
-        {/* Additional details for non-compact variant */}
-        {variant !== 'compact' && yearBuilt && (
-          <div className="mt-2 flex justify-between text-sm text-gray-500">
-            <span>Built {yearBuilt}</span>
-            {listingDate && (
-              <span>Listed {new Date(listingDate).toLocaleDateString()}</span>
-            )}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-md">
+            <Home className="h-5 w-5 mb-1" />
+            <p className="text-xs text-muted-foreground">Bedrooms</p>
+            <p className="font-semibold">{property.bedrooms}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-md">
+            <svg 
+              className="h-5 w-5 mb-1" 
+              xmlns="http://www.w3.org/2000/svg" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2"
+            >
+              <path d="M4 12h16M4 12a1 1 0 01-1-1V5a1 1 0 011-1h16a1 1 0 011 1v6a1 1 0 01-1 1M4 12v6a1 1 0 001 1h14a1 1 0 001-1v-6" />
+              <path d="M6 8v0m4 0v0" />
+            </svg>
+            <p className="text-xs text-muted-foreground">Bathrooms</p>
+            <p className="font-semibold">{property.bathrooms}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-md">
+            <Ruler className="h-5 w-5 mb-1" />
+            <p className="text-xs text-muted-foreground">Square Feet</p>
+            <p className="font-semibold">{property.squareFeet.toLocaleString()}</p>
+          </div>
+        </div>
+        
+        {property.description && (
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground mb-1">Description</p>
+            <p className="text-sm">{property.description}</p>
           </div>
         )}
       </CardContent>
       
-      {/* Card Footer */}
-      <CardFooter className={`flex justify-between ${variant === 'compact' ? 'p-3 pt-0' : 'p-4 pt-0'}`}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-1/2"
-        >
-          Compare
-        </Button>
-        <Link href={`/property/${id}`}>
-          <Button
-            size="sm"
-            className="w-full"
-            style={{
-              backgroundColor: colorScheme.primary,
-              color: colorScheme.text
-            }}
-          >
-            View Details
+      {showActions && (
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" asChild>
+            <Link href={`/properties/${property.id}`}>
+              View Details
+            </Link>
           </Button>
-        </Link>
-      </CardFooter>
+          <Button asChild>
+            <Link href={`/properties/${property.id}/assessment`}>
+              Assess Property
+            </Link>
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }
