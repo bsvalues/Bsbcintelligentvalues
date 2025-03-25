@@ -106,6 +106,14 @@ export function usePropertySearch(searchParams: PropertySearchParams = {}) {
 }
 
 /**
+ * Alias for usePropertySearch for compatibility with PropertySearchPage
+ * @param searchParams Search parameters for property query
+ */
+export function usePropertyData(searchParams: PropertySearchParams = {}) {
+  return usePropertySearch(searchParams);
+}
+
+/**
  * Hook for fetching a single property by ID
  */
 export function usePropertyDetail(propertyId: string) {

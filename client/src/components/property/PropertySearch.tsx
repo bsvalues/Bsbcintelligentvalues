@@ -31,7 +31,11 @@ import { DataLoadingState } from '../common/DataLoadingState';
 import { useAppContext } from '../../context/AppContext';
 import { Pagination } from '../ui/pagination';
 
-export const PropertySearch: React.FC = () => {
+export interface PropertySearchProps {
+  onSearch?: (params: PropertySearchParams) => void;
+}
+
+export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
   const { selectedCounty, propertyTypes } = useAppContext();
   
   // Search state
@@ -119,7 +123,13 @@ export const PropertySearch: React.FC = () => {
     // Log the search parameters for debugging
     console.log('Property search parameters:', newParams);
     
+    // Update internal state
     setSearchParams(newParams);
+    
+    // Call the external onSearch handler if provided
+    if (onSearch) {
+      onSearch(newParams);
+    }
   };
   
   // Handle page change
