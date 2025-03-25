@@ -10,6 +10,7 @@ import {
   Filter,
   FileText
 } from 'lucide-react';
+import { PropertySearchParams } from '../hooks/usePropertyData';
 
 // Helper functions for analytics
 const formatCurrency = (value: number): string => {
@@ -128,11 +129,14 @@ export default function PropertySearchPage() {
     setSearchParams({ ...searchParams, ...newParams });
   };
   
-  const handlePropertySelect = (id: number, selected: boolean) => {
+  const handlePropertySelect = (id: string | number, selected: boolean) => {
+    // Convert id to number if it's a string
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
     if (selected) {
-      setSelectedProperties([...selectedProperties, id]);
+      setSelectedProperties([...selectedProperties, numericId]);
     } else {
-      setSelectedProperties(selectedProperties.filter(propId => propId !== id));
+      setSelectedProperties(selectedProperties.filter(propId => propId !== numericId));
     }
   };
   
@@ -263,7 +267,8 @@ export default function PropertySearchPage() {
                                   className="rounded border-border h-4 w-4"
                                   onChange={(e) => {
                                     if (e.target.checked && data?.properties) {
-                                      setSelectedProperties(data.properties.map(p => p.id));
+                                      // Convert string IDs to numbers
+                                      setSelectedProperties(data.properties.map(p => typeof p.id === 'string' ? parseInt(p.id, 10) : p.id as number));
                                     } else {
                                       setSelectedProperties([]);
                                     }
@@ -391,7 +396,7 @@ export default function PropertySearchPage() {
                                     type="checkbox" 
                                     className="rounded border-border h-4 w-4"
                                     onChange={(e) => handlePropertySelect(property.id, e.target.checked)}
-                                    checked={selectedProperties.includes(property.id)}
+                                    checked={selectedProperties.includes(typeof property.id === 'string' ? parseInt(property.id, 10) : property.id as number)}
                                   />
                                 </td>
                                 <td className="px-4 py-3 text-sm">

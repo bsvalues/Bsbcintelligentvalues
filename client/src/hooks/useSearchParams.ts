@@ -1,19 +1,20 @@
 import { useState, useCallback } from 'react';
 
 /**
- * Custom hook to manage search parameters
- * @param initialParams Initial parameter values
- * @returns Object containing params and a function to update them
+ * A custom hook that provides state management for search parameters
+ * 
+ * @param initialParams - The initial search parameters
+ * @returns A tuple containing the current search parameters and a function to update them
  */
-export function useSearchParams<T extends Record<string, any>>(initialParams: T) {
-  const [params, setParams] = useState<T>(initialParams);
+export function useSearchParams<T extends Record<string, any>>(initialParams: T): [T, (newParams: Partial<T>) => void] {
+  const [searchParams, setSearchParamsState] = useState<T>(initialParams);
 
-  const updateParams = useCallback((newParams: Partial<T>) => {
-    setParams(prevParams => ({
+  const setSearchParams = useCallback((newParams: Partial<T>) => {
+    setSearchParamsState(prevParams => ({
       ...prevParams,
       ...newParams
     }));
   }, []);
 
-  return [params, updateParams] as const;
+  return [searchParams, setSearchParams];
 }
