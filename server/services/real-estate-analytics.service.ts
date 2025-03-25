@@ -567,15 +567,25 @@ export class RealEstateAnalyticsService {
       
       // Use the first connector to get market areas
       const connector = marketConnectors[0];
-      const areas = await connector.getMarketAreas();
       
-      // Transform to the format needed for the frontend
-      return areas.map(area => ({
-        id: area.id.toLowerCase(),
-        name: area.name,
-        description: area.description || `${area.name} real estate market area`,
-        propertyCount: area.propertyCount || 0
-      }));
+      // Import the MarketDataConnector class to check type
+      const { MarketDataConnector } = await import('./connectors/market.connector');
+      
+      // Check if connector is a MarketDataConnector
+      if (connector instanceof MarketDataConnector) {
+        const areasRaw = await connector.getMarketAreas();
+        
+        // Ensure description is never undefined to satisfy the return type
+        const areas = areasRaw.map(area => ({
+          ...area,
+          description: area.description || `${area.name} market area`
+        }));
+        
+        return areas;
+      } else {
+        console.warn("Market connector is not an instance of MarketDataConnector");
+        throw new Error("Market connector missing required method");
+      }
     } catch (error) {
       console.error("Error retrieving market area options:", error);
       

@@ -517,4 +517,175 @@ export class MarketDataConnector extends BaseDataConnector {
     
     return sortedListings;
   }
+
+  /**
+   * Get all market areas from the available listings
+   * @returns Array of market area objects with id, name, description and propertyCount
+   */
+  async getMarketAreas(): Promise<Array<{id: string; name: string; description?: string; propertyCount: number}>> {
+    try {
+      // Get all listings first
+      const result = await this.fetchData({});
+      const listings = result.data;
+
+      // Track neighborhoods and count properties in each
+      const neighborhoodMap = new Map<string, number>();
+      
+      listings.forEach(listing => {
+        if (listing.neighborhood && listing.neighborhood.trim() !== '') {
+          const name = listing.neighborhood.trim();
+          const count = neighborhoodMap.get(name) || 0;
+          neighborhoodMap.set(name, count + 1);
+        }
+      });
+
+      // Convert to array of objects with required properties
+      const marketAreas = Array.from(neighborhoodMap.entries()).map(([name, count]) => {
+        // Create a safe ID from the name
+        const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        
+        return {
+          id,
+          name,
+          description: `${name} real estate market area`,
+          propertyCount: count
+        };
+      });
+
+      // Sort by name alphabetically
+      return marketAreas.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      console.error('Error fetching market areas:', error);
+      const details = {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      };
+      throw new AppError('Failed to fetch market areas', 500, 'MARKET_DATA_ERROR', true, details);
+    }
+  }
+  
+  /**
+   * Fetch historical property data for a specific date
+   * @param params Query parameters for historical data
+   * @returns Historical property data for the specified date
+   */
+  async fetchHistoricalData(params: {
+    area?: string;
+    propertyType?: string;
+    date: string;
+  }): Promise<{
+    properties: PropertyListing[];
+    activeListings: number;
+    newListings: number;
+    soldListings: number;
+    pendingListings: number;
+    medianPricePerSqFt: number;
+    metrics: {
+      priceChangePct: number;
+      inventoryChangePct: number;
+      absorptionRate: number;
+      marketHealth: number;
+    };
+  }> {
+    try {
+      // Get all listings
+      const allListings = await this.fetchData({});
+      
+      // Create simulated historical data based on current listings
+      // In a real implementation, this would query the actual historical data
+      const date = new Date(params.date);
+      
+      // Filter listings to simulate historical state
+      // Older dates will have fewer properties and different metrics
+      const currentDate = new Date();
+      const monthsDiff = (currentDate.getFullYear() - date.getFullYear()) * 12 + 
+                         (currentDate.getMonth() - date.getMonth());
+      
+      // Filter listings to match area and property type
+      let filteredListings = allListings.data;
+      
+      if (params.area && params.area !== 'all') {
+        const area = params.area.toLowerCase();
+        filteredListings = filteredListings.filter(listing => 
+          listing.city?.toLowerCase() === area || 
+          listing.neighborhood?.toLowerCase() === area
+        );
+      }
+      
+      if (params.propertyType && params.propertyType !== 'all') {
+        filteredListings = filteredListings.filter(listing => 
+          listing.propertyType === params.propertyType
+        );
+      }
+      
+      // Apply historical simulation factors
+      // Prices decrease as we go back in time (approx 3% per year)
+      const yearFactor = 1 - (0.03 * (monthsDiff / 12));
+      
+      // Simulate fewer listings in the past
+      const inventoryFactor = Math.max(0.3, 1 - (0.05 * (monthsDiff / 12)));
+      
+      // Apply market fluctuations by adding some randomness
+      const randomFactor = 0.9 + (Math.random() * 0.2);
+      
+      // Limit the number of properties for the historical view
+      const historicalCount = Math.max(10, Math.floor(filteredListings.length * inventoryFactor * randomFactor));
+      const historicalProperties = filteredListings.slice(0, historicalCount).map(listing => {
+        // Adjust prices for historical view
+        const historicalPrice = Math.round(listing.price * yearFactor * (0.9 + (Math.random() * 0.2)));
+        
+        return {
+          ...listing,
+          price: historicalPrice,
+          originalPrice: historicalPrice * (1 + (Math.random() * 0.1)), // Small variation for original list price
+          daysOnMarket: Math.round(listing.daysOnMarket || 0 * (0.8 + (Math.random() * 0.4))), // Vary DOM
+        };
+      });
+      
+      // Calculate median price per square foot
+      const pricesPerSqFt = historicalProperties
+        .filter(p => p.price > 0 && p.squareFeet > 0)
+        .map(p => p.price / p.squareFeet);
+      
+      pricesPerSqFt.sort((a, b) => a - b);
+      
+      const medianPricePerSqFt = pricesPerSqFt.length > 0 
+        ? pricesPerSqFt[Math.floor(pricesPerSqFt.length / 2)] 
+        : 0;
+      
+      // Simulate listing status distribution
+      const activeListings = Math.round(historicalProperties.length * 0.6);
+      const soldListings = Math.round(historicalProperties.length * 0.25);
+      const pendingListings = Math.round(historicalProperties.length * 0.1);
+      const newListings = Math.round(historicalProperties.length * 0.05);
+      
+      // Calculate metrics
+      const priceChangePct = (yearFactor - 1) * (0.9 + (Math.random() * 0.2));
+      const inventoryChangePct = (inventoryFactor - 1) * (0.9 + (Math.random() * 0.2));
+      const absorptionRate = 0.3 + (Math.random() * 0.4); // 30-70% absorption rate
+      const marketHealth = 0.4 + (Math.random() * 0.5); // 40-90% market health score
+      
+      return {
+        properties: historicalProperties,
+        activeListings,
+        newListings,
+        soldListings,
+        pendingListings,
+        medianPricePerSqFt,
+        metrics: {
+          priceChangePct,
+          inventoryChangePct,
+          absorptionRate,
+          marketHealth
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+      const details = {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      };
+      throw new AppError('Failed to fetch historical property data', 500, 'MARKET_DATA_ERROR', true, details);
+    }
+  }
 }
