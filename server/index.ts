@@ -156,7 +156,17 @@ app.use((req, res, next) => {
               
               // Start microservices
               return startMicroservices()
-                .then(() => log('Microservices started successfully'))
+                .then(() => {
+                  log('Microservices started successfully');
+                  
+                  // Add a small delay to ensure everything is fully initialized
+                  return new Promise<void>(resolve => {
+                    setTimeout(() => {
+                      log('Application fully initialized and ready');
+                      resolve();
+                    }, 2000);
+                  });
+                })
                 .catch(err => console.error('Failed to start microservices:', err));
             })
             .catch(err => console.error('Failed to initialize agent system:', err));

@@ -1,168 +1,30 @@
 /**
- * App Component
+ * App Component - Debug Version
  * 
- * Main entry point for the IntelligentEstate application.
- * Handles routing and global application state.
+ * Simplified version to troubleshoot mounting issues
  */
 
-import { useState, useEffect } from 'react';
-import { Route, Switch } from 'wouter';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
-import { queryClient } from '@/lib/queryClient';
-import { ComparisonProvider } from './context/ComparisonContext';
-import { startPeriodicOptimization } from './lib/memoryOptimizer';
-import { NavBar } from './components/layout/NavBar';
-import RealEstateAnalyticsPage from './pages/RealEstateAnalyticsPage';
-import PropertyValuationPage from './pages/PropertyValuationPage';
-import NeighborhoodSentimentPage from './pages/NeighborhoodSentimentPage';
-import SentimentMapPage from './pages/SentimentMapPage';
-import SentimentTrendPage from './pages/SentimentTrendPage';
-import PropertyEnrichmentDemo from './pages/PropertyEnrichmentDemo';
-import PropertyValuationDemo from './pages/PropertyValuationDemo';
-import NeighborhoodComparisonPage from './pages/NeighborhoodComparisonPage';
-import SchoolAndEconomicAnalysisPage from './pages/SchoolAndEconomicAnalysisPage';
-import EconomicIndicatorsPage from './pages/EconomicIndicatorsPage';
-import PropertyDetailPage from './pages/PropertyDetailPage';
-import PropertyComparisonPage from './pages/PropertyComparisonPage';
-import AdvancedPropertyComparisonPage from './pages/AdvancedPropertyComparisonPage';
-import MarketTrendsPage from './pages/MarketTrendsPage';
-import NaturalHazardPage from './pages/NaturalHazardPage';
-import MassAppraisalPage from './pages/MassAppraisalPage';
-import MarketHeatMapPage from './pages/MarketHeatMapPage';
-import PropertyTrendVisualizerPage from './pages/PropertyTrendVisualizerPage';
-import ValuationAssistantPage from './pages/ValuationAssistantPage';
-import AdaptiveColorSchemePage from './pages/AdaptiveColorSchemePage';
-import MCPToolPage from './pages/MCPToolPage';
-import BlackScreenHelpPage from './pages/BlackScreenHelpPage';
-import HelpCenterPage from './pages/HelpCenterPage';
-import DevAuthLoginPage from './pages/DevAuthLoginPage';
-import DevAuthAdminPage from './pages/DevAuthAdminPage';
-import UserAdminPage from './pages/UserAdminPage';
-import TaxAssessmentDashboardPage from './pages/TaxAssessmentDashboardPage';
-import { RecommendationsPage } from './pages/RecommendationsPage';
-import NotFoundPage from './pages/NotFoundPage';
-import { 
-  TutorialManager, 
-  TutorialButton, 
-  WelcomeScreen,
-  AIAssistant 
-} from './components/onboarding';
-import { AISpecialistChat } from './components/ai';
-import ComparisonButton from './components/property/ComparisonButton';
-import ComparisonFloatingButton from './components/property/ComparisonFloatingButton';
-import SystemMonitorPage from './pages/SystemMonitorPage';
-
-// Main App component
 const App = () => {
-  const [showWelcome, setShowWelcome] = useState(false);
-  
-  // Check if this is the user's first visit
-  useEffect(() => {
-    const hasVisitedBefore = localStorage.getItem('hasVisitedBefore');
-    if (!hasVisitedBefore) {
-      // Show welcome screen after a short delay for better UX
-      const timer = setTimeout(() => {
-        setShowWelcome(true);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
-  
-  // Start memory optimization monitoring
-  useEffect(() => {
-    console.log('Starting memory optimization monitoring...');
-    // Check every 3 minutes (180,000 ms)
-    const cleanup = startPeriodicOptimization(180000, {
-      // Optimize when memory usage exceeds 80%
-      thresholdPercent: 80,
-      // Use enhanced optimization if memory is critically high (>90%)
-      useEnhanced: true,
-      // Log results when optimization completes
-      onComplete: (result) => {
-        console.log('Memory optimization completed:', result);
-        if (result.optimization?.improvements) {
-          console.log(
-            `Memory reduced by ${result.optimization.improvements.percentReduction} (${result.optimization.improvements.heapReduction})`
-          );
-        }
-      }
-    });
-    
-    // Clean up on component unmount
-    return () => {
-      console.log('Stopping memory optimization monitoring');
-      cleanup();
-    };
-  }, []);
-  
-  const handleCloseWelcome = () => {
-    setShowWelcome(false);
-    localStorage.setItem('hasVisitedBefore', 'true');
-  };
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <ComparisonProvider>
-        <TutorialManager>
-          <div className="min-h-screen bg-background font-sans antialiased">
-            <NavBar />
-            <main className="p-4">
-              <Switch>
-                <Route path="/" component={RealEstateAnalyticsPage} />
-                <Route path="/valuation" component={PropertyValuationPage} />
-                <Route path="/neighborhood-sentiment" component={NeighborhoodSentimentPage} />
-                <Route path="/sentiment-map" component={SentimentMapPage} />
-                <Route path="/sentiment-trends" component={SentimentTrendPage} />
-                <Route path="/property-enrichment" component={PropertyEnrichmentDemo} />
-                <Route path="/property-valuation-demo" component={PropertyValuationDemo} />
-                <Route path="/neighborhood-comparison" component={NeighborhoodComparisonPage} />
-                <Route path="/school-economic-analysis" component={SchoolAndEconomicAnalysisPage} />
-                <Route path="/economic-indicators" component={EconomicIndicatorsPage} />
-                <Route path="/property/:propertyId" component={PropertyDetailPage} />
-                <Route path="/property-comparison" component={PropertyComparisonPage} />
-                <Route path="/advanced-property-comparison" component={AdvancedPropertyComparisonPage} />
-                <Route path="/market-trends" component={MarketTrendsPage} />
-                <Route path="/natural-hazards" component={NaturalHazardPage} />
-                <Route path="/mass-appraisal" component={MassAppraisalPage} />
-                <Route path="/market-heat-map" component={MarketHeatMapPage} />
-                <Route path="/property-trend-visualizer" component={PropertyTrendVisualizerPage} />
-                <Route path="/valuation-assistant" component={ValuationAssistantPage} />
-                <Route path="/adaptive-color-scheme" component={AdaptiveColorSchemePage} />
-                <Route path="/mcp-tool" component={MCPToolPage} />
-                <Route path="/recommendations" component={RecommendationsPage} />
-                <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
-                <Route path="/system/monitor" component={SystemMonitorPage} />
-                <Route path="/fix-my-screen/help" component={BlackScreenHelpPage} />
-                <Route path="/help" component={HelpCenterPage} />
-                <Route path="/help/topics/:categoryId/:topicId" component={HelpCenterPage} />
-                <Route path="/dev-auth" component={DevAuthLoginPage} />
-                <Route path="/dev-auth/admin" component={DevAuthAdminPage} />
-                <Route path="/admin/users" component={UserAdminPage} />
-                <Route component={NotFoundPage} />
-              </Switch>
-            </main>
-            
-            <TutorialButton position="bottom-right" />
-            <AIAssistant />
-            <ComparisonButton position="bottom-right" />
-            <ComparisonFloatingButton />
-            
-            {/* Add the new AI Specialist Chat with fix positioned button in the header */}
-            <div className="fixed top-4 right-4 z-40">
-              <AISpecialistChat />
-            </div>
-            
-            {showWelcome && (
-              <WelcomeScreen onClose={handleCloseWelcome} />
-            )}
-            
-            <Toaster />
-          </div>
-        </TutorialManager>
-      </ComparisonProvider>
-    </QueryClientProvider>
+    <div style={{ 
+      padding: '20px', 
+      maxWidth: '800px', 
+      margin: '0 auto', 
+      fontFamily: 'system-ui, sans-serif'
+    }}>
+      <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>BS Values - Tax Assessment SaaS</h1>
+      <p style={{ marginBottom: '20px' }}>
+        This is a simplified debug version of the application to troubleshoot mounting issues.
+        If you can see this page, the basic React rendering is working correctly.
+      </p>
+      <hr style={{ margin: '20px 0' }} />
+      <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>
+        <h2 style={{ fontSize: '18px', marginBottom: '10px' }}>System Status</h2>
+        <p>Application is running in debug mode</p>
+        <p>Server Port: 5000</p>
+        <p>Environment: {process.env.NODE_ENV}</p>
+      </div>
+    </div>
   );
 };
 
