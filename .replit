@@ -31,7 +31,7 @@ localPort = 8004
 externalPort = 3003
 
 [workflows]
-runButton = "Start Dev Server"
+runButton = "Start Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -78,6 +78,23 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pkill -f \"node|tsx\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=3000 npm run dev"
+
+[[workflows.workflow]]
+name = "Start Server"
+author = 37274620
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"node|tsx\" || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python microservices/launch.py"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
