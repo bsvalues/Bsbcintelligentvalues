@@ -63,7 +63,7 @@ export const PropertySearch: React.FC = () => {
   // Fetch properties based on search params
   const { data, isLoading, isError, error, refetch } = usePropertySearch(searchParams);
   
-  // Apply filters and search
+  // Apply filters and search with intelligent parsing
   const applySearchAndFilters = () => {
     const newParams: PropertySearchParams = {
       ...searchParams,
@@ -72,14 +72,36 @@ export const PropertySearch: React.FC = () => {
       page: 1, // Reset to first page when applying new filters
     };
     
-    // Handle address search
+    // Handle intelligent address search
     if (searchText) {
-      if (searchText.match(/^[0-9]{3,}-[0-9]{3,}-[0-9]{3,}$/)) {
-        // Looks like a parcel number format
-        newParams.parcelNumber = searchText;
+      // Advanced pattern recognition
+      // Check for parcel number format (000-000-000 or similar)
+      if (searchText.match(/^[0-9]{3,}[-\s]?[0-9]{3,}([-\s]?[0-9]{3,})?$/)) {
+        // Looks like a parcel number format - normalize by removing spaces
+        newParams.parcelNumber = searchText.replace(/\s+/g, '');
         newParams.address = undefined;
-      } else {
-        // Treat as address search
+      } 
+      // Check if it's just a number (e.g., house number)
+      else if (/^\d+$/.test(searchText)) {
+        // It's just a number - search in both address and parcel with wildcards
+        newParams.address = searchText; // Will match house numbers
+        // Don't set parcelNumber to allow for flexible search
+      }
+      // Check if it contains street suffix indicators
+      else if (/\b(st|ave|rd|blvd|dr|ln|way|pl|ct)\b/i.test(searchText)) {
+        // Looks like a street name with suffix
+        newParams.address = searchText;
+        newParams.parcelNumber = undefined;
+      }
+      // Check if it's a zip code
+      else if (/^\d{5}(-\d{4})?$/.test(searchText)) {
+        newParams.zipCode = searchText;
+        newParams.address = undefined;
+        newParams.parcelNumber = undefined;
+      }
+      // Default case - general search term
+      else {
+        // Treat as address search with wildcards for partial matching
         newParams.address = searchText;
         newParams.parcelNumber = undefined;
       }
@@ -87,7 +109,15 @@ export const PropertySearch: React.FC = () => {
       // Clear search if empty
       newParams.address = undefined;
       newParams.parcelNumber = undefined;
+      newParams.zipCode = undefined;
     }
+    
+    // Map advanced filter parameters to API parameters
+    newParams.yearBuiltMin = advancedFilters.minYearBuilt;
+    newParams.yearBuiltMax = advancedFilters.maxYearBuilt;
+    
+    // Log the search parameters for debugging
+    console.log('Property search parameters:', newParams);
     
     setSearchParams(newParams);
   };

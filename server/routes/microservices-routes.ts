@@ -81,13 +81,16 @@ router.post('/properties/search', async (req, res) => {
     res.json(properties);
   } catch (error) {
     console.error('Error searching properties:', error);
-    res.status(500).json({ error: 'Error searching properties', message: error.message });
+    res.status(500).json({ 
+      error: 'Error searching properties', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
 /**
  * GET /api/properties/search
- * Search for properties (GET)
+ * Enhanced search for properties with intelligent query processing
  */
 router.get('/properties/search', async (req, res) => {
   try {
@@ -107,18 +110,77 @@ router.get('/properties/search', async (req, res) => {
     if (req.query.zipCode) searchParams.zipCode = req.query.zipCode as string;
     if (req.query.neighborhood) searchParams.neighborhood = req.query.neighborhood as string;
     if (req.query.propertyType) searchParams.propertyType = req.query.propertyType as string;
-    if (req.query.address) searchParams.address = req.query.address as string;
-    if (req.query.parcelNumber) searchParams.parcelNumber = req.query.parcelNumber as string;
     
-    // Extract and parse numeric filter parameters
-    if (req.query.minValue) searchParams.minValue = parseInt(req.query.minValue as string);
-    if (req.query.maxValue) searchParams.maxValue = parseInt(req.query.maxValue as string);
-    if (req.query.minSquareFeet) searchParams.minSquareFeet = parseInt(req.query.minSquareFeet as string);
-    if (req.query.maxSquareFeet) searchParams.maxSquareFeet = parseInt(req.query.maxSquareFeet as string);
-    if (req.query.minYearBuilt) searchParams.yearBuiltMin = parseInt(req.query.minYearBuilt as string);
-    if (req.query.maxYearBuilt) searchParams.yearBuiltMax = parseInt(req.query.maxYearBuilt as string);
-    if (req.query.minBedrooms) searchParams.minBedrooms = parseInt(req.query.minBedrooms as string);
-    if (req.query.minBathrooms) searchParams.minBathrooms = parseFloat(req.query.minBathrooms as string);
+    // Enhanced address and parcel number handling with fuzzy search capability
+    if (req.query.address) {
+      const addressQuery = req.query.address as string;
+      
+      // If it looks like just a house number, add a wildcard for flexible matching
+      if (/^\d+$/.test(addressQuery)) {
+        searchParams.addressWildcard = `${addressQuery}%`; // Will match house numbers that start with this
+        // We'll also want partial address matching (helpful for house numbers)
+        searchParams.address = addressQuery;
+        searchParams.fuzzyMatch = true; // Signal to use fuzzy matching in the microservice
+      } else {
+        // Regular address search, but enable partial matching
+        searchParams.address = addressQuery;
+        
+        // Check if it's a partial address (no street suffix)
+        if (!/\b(st|ave|rd|blvd|dr|ln|way|pl|ct)\b/i.test(addressQuery)) {
+          searchParams.fuzzyMatch = true;
+        }
+      }
+    }
+    
+    // Enhanced parcel number handling
+    if (req.query.parcelNumber) {
+      // Normalize parcel number formats by removing spaces and dashes
+      searchParams.parcelNumber = (req.query.parcelNumber as string).replace(/[\s-]/g, '');
+    }
+    
+    // Extract and parse numeric filter parameters with validation
+    if (req.query.minValue) {
+      const value = parseInt(req.query.minValue as string);
+      if (!isNaN(value) && value >= 0) searchParams.minValue = value;
+    }
+    
+    if (req.query.maxValue) {
+      const value = parseInt(req.query.maxValue as string);
+      if (!isNaN(value) && value > 0) searchParams.maxValue = value;
+    }
+    
+    if (req.query.minSquareFeet) {
+      const value = parseInt(req.query.minSquareFeet as string);
+      if (!isNaN(value) && value >= 0) searchParams.minSquareFeet = value;
+    }
+    
+    if (req.query.maxSquareFeet) {
+      const value = parseInt(req.query.maxSquareFeet as string);
+      if (!isNaN(value) && value > 0) searchParams.maxSquareFeet = value;
+    }
+    
+    if (req.query.minYearBuilt) {
+      const value = parseInt(req.query.minYearBuilt as string);
+      // Reasonable year built range
+      if (!isNaN(value) && value >= 1800 && value <= new Date().getFullYear()) 
+        searchParams.yearBuiltMin = value;
+    }
+    
+    if (req.query.maxYearBuilt) {
+      const value = parseInt(req.query.maxYearBuilt as string);
+      if (!isNaN(value) && value >= 1800 && value <= new Date().getFullYear()) 
+        searchParams.yearBuiltMax = value;
+    }
+    
+    if (req.query.minBedrooms) {
+      const value = parseInt(req.query.minBedrooms as string);
+      if (!isNaN(value) && value >= 0) searchParams.minBedrooms = value;
+    }
+    
+    if (req.query.minBathrooms) {
+      const value = parseFloat(req.query.minBathrooms as string);
+      if (!isNaN(value) && value >= 0) searchParams.minBathrooms = value;
+    }
     
     // Handle array parameters (like neighborhoods)
     if (req.query.neighborhoods) {
@@ -129,13 +191,17 @@ router.get('/properties/search', async (req, res) => {
       }
     }
     
+    // Log search parameters for debugging and analytics
     console.log('Property search parameters:', searchParams);
     
+    // Execute the search with enhanced parameters
     const properties = await microserviceClients.propertyService.getProperties(searchParams);
+    
+    // Return the search results
     res.json(properties);
   } catch (error) {
     console.error('Error searching properties:', error);
-    res.status(500).json({ error: 'Error searching properties', message: error.message });
+    res.status(500).json({ error: 'Error searching properties', message: (error as Error).message });
   }
 });
 
