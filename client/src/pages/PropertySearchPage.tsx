@@ -219,7 +219,7 @@ export default function PropertySearchPage() {
         {/* View mode selector */}
         <div className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
-            {data ? (
+            {data && data.properties ? (
               <>Showing {data.properties.length} of {data.total} properties</>
             ) : (
               <>Loading properties...</>
@@ -507,7 +507,7 @@ export default function PropertySearchPage() {
               {data?.properties && data.properties.length > 0 && (
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-muted-foreground">
-                    Showing {data.properties.length} of {data.total} properties
+                    Showing {data.properties ? data.properties.length : 0} of {data.total} properties
                   </div>
                   <div className="flex gap-2">
                     <Button
