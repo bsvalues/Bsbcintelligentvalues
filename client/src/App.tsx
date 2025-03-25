@@ -15,18 +15,8 @@ import ToastTest from './components/common/ToastTest';
 // Import our microservices test page
 import { MicroservicesTestPage } from './pages/MicroservicesTestPage';
 
-// Simple mock of QueryClient until we properly configure it
-const queryClient = {
-  setDefaultOptions: () => {},
-  isFetching: 0,
-  isMutating: 0,
-  // Mock the necessary methods and properties
-  mount: () => {},
-  unmount: () => {},
-  getQueryCache: () => ({}),
-  getMutationCache: () => ({}),
-  getDefaultOptions: () => ({}),
-} as any; // Type assertion to avoid TypeScript errors
+// Import the properly configured QueryClient
+import { queryClient } from './lib/queryClient';
 
 // Simple LoadingSpinner component
 const LoadingSpinner = () => (

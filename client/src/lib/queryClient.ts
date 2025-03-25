@@ -9,13 +9,26 @@ const defaultOptions = {
   },
 };
 
-// Create a client
+// Create a client with properly configured v5 options
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false, // disable refetch on window focus
       retry: 1, // retry failed queries once
       staleTime: 5 * 60 * 1000, // 5 minutes
+      queryFn: async ({ queryKey }) => {
+        // Default fetcher using the first array element as the URL
+        if (Array.isArray(queryKey) && typeof queryKey[0] === 'string') {
+          const url = queryKey[0];
+          const response = await fetch(url);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
+          }
+          return response.json();
+        }
+        throw new Error('Invalid query key format');
+      },
     },
   },
 });

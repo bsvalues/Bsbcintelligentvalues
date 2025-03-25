@@ -74,7 +74,7 @@ export interface PropertyValuation {
 export function usePropertySearch(searchParams: PropertySearchParams = {}) {
   return useQuery<PropertySearchResult>({
     queryKey: ['/api/properties/search', searchParams],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       // Convert search params to URL parameters
       const params = new URLSearchParams();
       Object.entries(searchParams).forEach(([key, value]) => {
@@ -96,15 +96,7 @@ export function usePropertySearch(searchParams: PropertySearchParams = {}) {
     },
     enabled: true,
     retry: 1,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Property search error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch properties',
-        variant: 'destructive',
-      });
-    }
+    refetchOnWindowFocus: false
   });
 }
 
@@ -114,7 +106,7 @@ export function usePropertySearch(searchParams: PropertySearchParams = {}) {
 export function usePropertyDetail(propertyId: string) {
   return useQuery<Property>({
     queryKey: ['/api/properties', propertyId],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const response = await fetch(`/api/properties/${propertyId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -125,15 +117,7 @@ export function usePropertyDetail(propertyId: string) {
     },
     enabled: !!propertyId,
     retry: 1,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Property detail error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch property details',
-        variant: 'destructive',
-      });
-    }
+    refetchOnWindowFocus: false
   });
 }
 
@@ -143,7 +127,7 @@ export function usePropertyDetail(propertyId: string) {
 export function usePropertyValuations(propertyId: string) {
   return useQuery<PropertyValuation[]>({
     queryKey: ['/api/properties', propertyId, 'valuations'],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const response = await fetch(`/api/properties/${propertyId}/valuations`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -154,14 +138,6 @@ export function usePropertyValuations(propertyId: string) {
     },
     enabled: !!propertyId,
     retry: 1,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Property valuations error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch property valuations',
-        variant: 'destructive',
-      });
-    }
+    refetchOnWindowFocus: false
   });
 }

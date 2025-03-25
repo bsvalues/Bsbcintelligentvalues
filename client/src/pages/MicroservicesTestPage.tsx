@@ -157,7 +157,7 @@ export function MicroservicesTestPage() {
                   </div>
                 ) : propertyQuery.data ? (
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Results ({propertyQuery.data.total || 0} properties)</h3>
+                    <h3 className="text-lg font-medium mb-2">Results ({propertyQuery.data?.total || 0} properties)</h3>
                     <div className="border rounded-md overflow-hidden">
                       <table className="w-full">
                         <thead className="bg-muted">
@@ -169,7 +169,7 @@ export function MicroservicesTestPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {propertyQuery.data.properties?.map((property) => (
+                          {propertyQuery.data?.properties?.map((property: any) => (
                             <tr key={property.id} className="border-t">
                               <td className="px-4 py-2">{property.id}</td>
                               <td className="px-4 py-2">{property.address}</td>
@@ -179,7 +179,7 @@ export function MicroservicesTestPage() {
                               <td className="px-4 py-2 text-right">{property.squareFeet?.toLocaleString() || 'N/A'}</td>
                             </tr>
                           ))}
-                          {(!propertyQuery.data.properties || propertyQuery.data.properties.length === 0) && (
+                          {(!propertyQuery.data?.properties || propertyQuery.data?.properties.length === 0) && (
                             <tr>
                               <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                                 No properties found. Try adjusting your search criteria.

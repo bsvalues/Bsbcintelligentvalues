@@ -57,7 +57,7 @@ export interface MarketHotspot {
 export function useMarketMetrics(county: string) {
   return useQuery<MarketMetrics>({
     queryKey: ['/api/market', county, 'metrics'],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const response = await fetch(`/api/market/${encodeURIComponent(county)}/metrics`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -78,7 +78,7 @@ export function useMarketMetrics(county: string) {
 export function useMarketTrend(metric: string, county: string, period: 'month' | 'quarter' | 'year' = 'year') {
   return useQuery<MarketTrend>({
     queryKey: ['/api/market', 'trends', metric, county, period],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const response = await fetch(`/api/predict-market-trend`, {
         method: 'POST',
         headers: {
@@ -110,7 +110,7 @@ export function useMarketTrend(metric: string, county: string, period: 'month' |
 export function useMarketHotspots(county: string) {
   return useQuery<MarketHotspot[]>({
     queryKey: ['/api/market', 'hotspots', county],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const response = await fetch(`/api/find-hotspots`, {
         method: 'POST',
         headers: {
