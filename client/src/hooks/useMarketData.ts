@@ -1,126 +1,135 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "../lib/queryClient";
+import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/components/ui/use-toast';
 
-// Market data types
 export interface MarketMetrics {
   county: string;
-  date: string;
   medianSalePrice: number;
   averageSalePrice: number;
   totalSales: number;
   daysOnMarket: number;
-  listToSaleRatio: number;
   pricePerSquareFoot: number;
   inventoryCount: number;
   newListings: number;
-  changeInMedianPrice: number; // percentage change from previous period
-  foreclosureRate: number;
-  assessmentRatio: number; // assessed value to market value ratio
-}
-
-export interface MarketTrendData {
-  date: string;
-  medianSalePrice: number;
-  averageSalePrice: number;
-  totalSales: number;
-  daysOnMarket: number;
-  listToSaleRatio: number;
-  pricePerSquareFoot: number;
-  inventoryCount: number;
   assessmentRatio: number;
+  trendDirection: 'up' | 'down' | 'stable';
+  month: number;
+  year: number;
+  timestamp: string;
 }
 
-export interface MarketHeatmapPoint {
-  latitude: number;
-  longitude: number;
-  value: number; // typically price or ratio
+export interface MarketTrend {
+  metric: string;
+  data: Array<{
+    date: string;
+    value: number;
+  }>;
+  trend: 'up' | 'down' | 'stable';
+  percentageChange: number;
+  forecast?: Array<{
+    date: string;
+    value: number;
+    lowerBound?: number;
+    upperBound?: number;
+  }>;
+}
+
+export interface MarketHotspot {
+  id: string;
   neighborhood: string;
   county: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  medianSalePrice: number;
+  priceChangePercent: number;
+  averageDaysOnMarket: number;
+  salesVolume: number;
+  inventoryCount: number;
+  supplyDemandIndex: number;
+  investmentScore: number;
+  latitude: number;
+  longitude: number;
 }
 
-// Function to get current market metrics for a county
+/**
+ * Hook for fetching market metrics for a county
+ */
 export function useMarketMetrics(county: string) {
-  return useQuery({
-    queryKey: ['/api/market/metrics', county],
+  return useQuery<MarketMetrics>({
+    queryKey: ['/api/market', county, 'metrics'],
     queryFn: async () => {
-      const response = await apiRequest<MarketMetrics>(`/api/market/metrics?county=${county}`);
-      return response;
-    },
-    enabled: !!county,
-  });
-}
-
-// Function to get market trends over time
-export function useMarketTrends(county: string, startDate?: string, endDate?: string, metric: string = 'medianSalePrice') {
-  return useQuery({
-    queryKey: ['/api/market/trends', county, startDate, endDate, metric],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('county', county);
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      params.append('metric', metric);
+      const response = await fetch(`/api/market/${encodeURIComponent(county)}/metrics`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to fetch market metrics');
+      }
       
-      const response = await apiRequest<MarketTrendData[]>(`/api/market/trends?${params.toString()}`);
-      return response;
+      return response.json();
     },
     enabled: !!county,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
-// Function to get neighborhood comparison data
-export function useNeighborhoodComparison(county: string) {
-  return useQuery({
-    queryKey: ['/api/market/neighborhood-comparison', county],
+/**
+ * Hook for fetching market trends
+ */
+export function useMarketTrend(metric: string, county: string, period: 'month' | 'quarter' | 'year' = 'year') {
+  return useQuery<MarketTrend>({
+    queryKey: ['/api/market', 'trends', metric, county, period],
     queryFn: async () => {
-      const response = await apiRequest<Array<{
-        neighborhood: string;
-        medianSalePrice: number;
-        averageSalePrice: number;
-        totalSales: number;
-        daysOnMarket: number;
-        pricePerSquareFoot: number;
-        assessmentRatio: number;
-      }>>(`/api/market/neighborhood-comparison?county=${county}`);
-      return response;
-    },
-    enabled: !!county,
-  });
-}
-
-// Function to get market heatmap data
-export function useMarketHeatmap(county: string, metric: string = 'pricePerSquareFoot') {
-  return useQuery({
-    queryKey: ['/api/market/heatmap', county, metric],
-    queryFn: async () => {
-      const response = await apiRequest<MarketHeatmapPoint[]>(
-        `/api/market/heatmap?county=${county}&metric=${metric}`
-      );
-      return response;
-    },
-    enabled: !!county,
-  });
-}
-
-// Function to get assessment ratio trends
-export function useAssessmentRatioTrends(county: string, startDate?: string, endDate?: string) {
-  return useQuery({
-    queryKey: ['/api/market/assessment-ratio-trends', county, startDate, endDate],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('county', county);
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+      const response = await fetch(`/api/predict-market-trend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          metric,
+          county,
+          period,
+        }),
+      });
       
-      const response = await apiRequest<Array<{
-        date: string;
-        assessmentRatio: number;
-        medianAssessmentRatio: number;
-        coefficientOfDispersion: number;
-        priceRelatedDifferential: number;
-      }>>(`/api/market/assessment-ratio-trends?${params.toString()}`);
-      return response;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to fetch market trend');
+      }
+      
+      return response.json();
+    },
+    enabled: !!metric && !!county,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook for fetching market hotspots
+ */
+export function useMarketHotspots(county: string) {
+  return useQuery<MarketHotspot[]>({
+    queryKey: ['/api/market', 'hotspots', county],
+    queryFn: async () => {
+      const response = await fetch(`/api/find-hotspots`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          county,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to fetch market hotspots');
+      }
+      
+      return response.json();
     },
     enabled: !!county,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }

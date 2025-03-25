@@ -9,8 +9,11 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/components/ui/use-toast';
 import Footer from './components/layout/Footer';
-import { Building2, Search, BarChart4, Home, Map, FileText, Settings, HelpCircle, Bell } from 'lucide-react';
+import { Building2, Search, BarChart4, Home, Map, FileText, Settings, HelpCircle, Bell, AlertCircle, PieChart, TrendingUp, Server } from 'lucide-react';
 import ToastTest from './components/common/ToastTest';
+
+// Import our microservices test page
+import { MicroservicesTestPage } from './pages/MicroservicesTestPage';
 
 // Simple mock of QueryClient until we properly configure it
 const queryClient = {
