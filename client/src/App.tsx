@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/lib/queryClient';
 import { ComparisonProvider } from './context/ComparisonContext';
 import { startPeriodicOptimization } from './lib/memoryOptimizer';
+import { NavBar } from './components/layout/NavBar';
 import RealEstateAnalyticsPage from './pages/RealEstateAnalyticsPage';
 import PropertyValuationPage from './pages/PropertyValuationPage';
 import NeighborhoodSentimentPage from './pages/NeighborhoodSentimentPage';
@@ -106,39 +107,42 @@ const App = () => {
       <ComparisonProvider>
         <TutorialManager>
           <div className="min-h-screen bg-background font-sans antialiased">
-            <Switch>
-              <Route path="/" component={RealEstateAnalyticsPage} />
-              <Route path="/valuation" component={PropertyValuationPage} />
-              <Route path="/neighborhood-sentiment" component={NeighborhoodSentimentPage} />
-              <Route path="/sentiment-map" component={SentimentMapPage} />
-              <Route path="/sentiment-trends" component={SentimentTrendPage} />
-              <Route path="/property-enrichment" component={PropertyEnrichmentDemo} />
-              <Route path="/property-valuation-demo" component={PropertyValuationDemo} />
-              <Route path="/neighborhood-comparison" component={NeighborhoodComparisonPage} />
-              <Route path="/school-economic-analysis" component={SchoolAndEconomicAnalysisPage} />
-              <Route path="/economic-indicators" component={EconomicIndicatorsPage} />
-              <Route path="/property/:propertyId" component={PropertyDetailPage} />
-              <Route path="/property-comparison" component={PropertyComparisonPage} />
-              <Route path="/advanced-property-comparison" component={AdvancedPropertyComparisonPage} />
-              <Route path="/market-trends" component={MarketTrendsPage} />
-              <Route path="/natural-hazards" component={NaturalHazardPage} />
-              <Route path="/mass-appraisal" component={MassAppraisalPage} />
-              <Route path="/market-heat-map" component={MarketHeatMapPage} />
-              <Route path="/property-trend-visualizer" component={PropertyTrendVisualizerPage} />
-              <Route path="/valuation-assistant" component={ValuationAssistantPage} />
-              <Route path="/adaptive-color-scheme" component={AdaptiveColorSchemePage} />
-              <Route path="/mcp-tool" component={MCPToolPage} />
-              <Route path="/recommendations" component={RecommendationsPage} />
-              <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
-              <Route path="/system/monitor" component={SystemMonitorPage} />
-              <Route path="/fix-my-screen/help" component={BlackScreenHelpPage} />
-              <Route path="/help" component={HelpCenterPage} />
-              <Route path="/help/topics/:categoryId/:topicId" component={HelpCenterPage} />
-              <Route path="/dev-auth" component={DevAuthLoginPage} />
-              <Route path="/dev-auth/admin" component={DevAuthAdminPage} />
-              <Route path="/admin/users" component={UserAdminPage} />
-              <Route component={NotFoundPage} />
-            </Switch>
+            <NavBar />
+            <main className="p-4">
+              <Switch>
+                <Route path="/" component={RealEstateAnalyticsPage} />
+                <Route path="/valuation" component={PropertyValuationPage} />
+                <Route path="/neighborhood-sentiment" component={NeighborhoodSentimentPage} />
+                <Route path="/sentiment-map" component={SentimentMapPage} />
+                <Route path="/sentiment-trends" component={SentimentTrendPage} />
+                <Route path="/property-enrichment" component={PropertyEnrichmentDemo} />
+                <Route path="/property-valuation-demo" component={PropertyValuationDemo} />
+                <Route path="/neighborhood-comparison" component={NeighborhoodComparisonPage} />
+                <Route path="/school-economic-analysis" component={SchoolAndEconomicAnalysisPage} />
+                <Route path="/economic-indicators" component={EconomicIndicatorsPage} />
+                <Route path="/property/:propertyId" component={PropertyDetailPage} />
+                <Route path="/property-comparison" component={PropertyComparisonPage} />
+                <Route path="/advanced-property-comparison" component={AdvancedPropertyComparisonPage} />
+                <Route path="/market-trends" component={MarketTrendsPage} />
+                <Route path="/natural-hazards" component={NaturalHazardPage} />
+                <Route path="/mass-appraisal" component={MassAppraisalPage} />
+                <Route path="/market-heat-map" component={MarketHeatMapPage} />
+                <Route path="/property-trend-visualizer" component={PropertyTrendVisualizerPage} />
+                <Route path="/valuation-assistant" component={ValuationAssistantPage} />
+                <Route path="/adaptive-color-scheme" component={AdaptiveColorSchemePage} />
+                <Route path="/mcp-tool" component={MCPToolPage} />
+                <Route path="/recommendations" component={RecommendationsPage} />
+                <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
+                <Route path="/system/monitor" component={SystemMonitorPage} />
+                <Route path="/fix-my-screen/help" component={BlackScreenHelpPage} />
+                <Route path="/help" component={HelpCenterPage} />
+                <Route path="/help/topics/:categoryId/:topicId" component={HelpCenterPage} />
+                <Route path="/dev-auth" component={DevAuthLoginPage} />
+                <Route path="/dev-auth/admin" component={DevAuthAdminPage} />
+                <Route path="/admin/users" component={UserAdminPage} />
+                <Route component={NotFoundPage} />
+              </Switch>
+            </main>
             
             <TutorialButton position="bottom-right" />
             <AIAssistant />
