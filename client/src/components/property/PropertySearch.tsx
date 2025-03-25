@@ -543,7 +543,7 @@ export const PropertySearch: React.FC = () => {
             )}
           </div>
           
-          {data && data.properties.length > 0 && (
+          {data && data.properties && data.properties.length > 0 && (
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
                 Showing {((searchParams.page || 1) - 1) * (searchParams.pageSize || 10) + 1}-
