@@ -351,22 +351,148 @@ export default function PropertySearchPage() {
           </TabsContent>
           
           <TabsContent value="analytics" className="m-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Property Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[50vh] bg-muted rounded-md flex items-center justify-center">
-                  <div className="text-center">
-                    <BarChart4 className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium">Property Data Analytics</h3>
-                    <p className="text-muted-foreground mt-1">
-                      Analytics dashboard will be implemented in the next phase with interactive charts and data visualizations.
-                    </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Property Value Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[40vh] bg-muted rounded-md p-4">
+                    {data?.properties && data.properties.length > 0 ? (
+                      <div className="h-full w-full">
+                        <div className="flex h-full items-end justify-between gap-2">
+                          {/* Value distribution chart */}
+                          {generateValueRanges(data.properties).map((range, index) => (
+                            <div key={index} className="relative flex flex-col items-center">
+                              <div 
+                                className="w-12 bg-blue-500 rounded-t-md hover:bg-blue-600 transition-colors"
+                                style={{ 
+                                  height: `${(range.count / Math.max(...generateValueRanges(data.properties).map(r => r.count))) * 100}%`,
+                                  minHeight: '20px'
+                                }}
+                              >
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-medium">
+                                  {range.count}
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2 transform -rotate-45 origin-top-left">
+                                {formatCurrency(range.min)} - {formatCurrency(range.max)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <BarChart4 className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                          <h3 className="text-lg font-medium">No Data Available</h3>
+                          <p className="text-muted-foreground mt-1">
+                            Search for properties to see analytics.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle>Property Type Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {data?.properties && data.properties.length > 0 ? (
+                      <div className="space-y-4">
+                        {generatePropertyTypeDistribution(data.properties).map((type, index) => (
+                          <div key={index} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>{type.type || 'Unknown'}</span>
+                              <span className="font-medium">{type.percentage}%</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2.5">
+                              <div 
+                                className="bg-blue-600 h-2.5 rounded-full" 
+                                style={{ width: `${type.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center text-muted-foreground">
+                        No data available
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle>Statistical Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {data?.properties && data.properties.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs text-muted-foreground">Avg. Assessed Value</div>
+                            <div className="text-lg font-medium">
+                              {formatCurrency(calculateAverage(data.properties, 'assessedValue'))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Avg. Sq Footage</div>
+                            <div className="text-lg font-medium">
+                              {Math.round(calculateAverage(data.properties, 'squareFeet'))} sq ft
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Minimum Value</span>
+                            <span className="font-medium">
+                              {formatCurrency(calculateMinValue(data.properties, 'assessedValue'))}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Maximum Value</span>
+                            <span className="font-medium">
+                              {formatCurrency(calculateMaxValue(data.properties, 'assessedValue'))}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Median Value</span>
+                            <span className="font-medium">
+                              {formatCurrency(calculateMedianValue(data.properties, 'assessedValue'))}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-3 border-t border-border">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleExport('csv')}
+                            disabled={!data || data.properties.length === 0}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Export Full Analysis
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center text-muted-foreground">
+                        No data available
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
         </DataLoadingState>
       </div>
