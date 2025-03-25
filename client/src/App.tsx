@@ -12,8 +12,10 @@ import Footer from './components/layout/Footer';
 import { Building2, Search, BarChart4, Home, Map, FileText, Settings, HelpCircle, Bell, AlertCircle, PieChart, TrendingUp, Server } from 'lucide-react';
 import ToastTest from './components/common/ToastTest';
 
-// Import our microservices test page
+// Import our page components
 import { MicroservicesTestPage } from './pages/MicroservicesTestPage';
+import TaxAssessmentDashboardPage from './pages/TaxAssessmentDashboardPage';
+import PropertySearchPage from './pages/PropertySearchPage';
 
 // Import the properly configured QueryClient
 import { queryClient } from './lib/queryClient';
@@ -212,8 +214,7 @@ const StatusCard = ({ label, value, change }: { label: string; value: string; ch
   );
 };
 
-// Import Tax Assessment Dashboard Page
-import TaxAssessmentDashboardPage from './pages/TaxAssessmentDashboardPage';
+// Tax Assessment Dashboard Page is imported in the routes
 
 // Helper component for statistics
 const StatItem = ({ label, value }: { label: string; value: string }) => (
@@ -223,153 +224,7 @@ const StatItem = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-// Property Search Page
-const PropertySearchPage = () => (
-  <div className="container mx-auto p-8">
-    <h1 className="text-3xl font-bold mb-6">Property Search</h1>
-    <p className="text-gray-600 mb-8">Search for properties in the county database.</p>
-    
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-grow">
-          <input 
-            type="text" 
-            placeholder="Search by address, owner name, or parcel ID..." 
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md">
-            Search
-          </button>
-        </div>
-      </div>
-      
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <div className="text-sm font-medium text-gray-500 mb-2">Advanced Filters</div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="">All Types</option>
-              <option value="residential">Residential</option>
-              <option value="commercial">Commercial</option>
-              <option value="industrial">Industrial</option>
-              <option value="agricultural">Agricultural</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Value Range</label>
-            <div className="flex items-center space-x-2">
-              <input 
-                type="text" 
-                placeholder="Min" 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md" 
-              />
-              <span>-</span>
-              <input 
-                type="text" 
-                placeholder="Max" 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md" 
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Assessment Status</label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="">All Statuses</option>
-              <option value="complete">Complete</option>
-              <option value="pending">Pending</option>
-              <option value="appealed">Appealed</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Assessment Date</label>
-            <input 
-              type="date" 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md" 
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Search Results</h2>
-        <div className="text-sm text-gray-500">Showing 3 results</div>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessed Value</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            <tr>
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">PR-10542</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">123 Main St, Grandview, WA</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">John Smith</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Residential</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">$320,500</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Mar 20, 2025</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                <a href="#" className="text-blue-600 hover:text-blue-800 mr-3">View</a>
-                <a href="#" className="text-blue-600 hover:text-blue-800">Edit</a>
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">PR-10543</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">456 Oak Ave, Grandview, WA</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Jane Doe</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Residential</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">$455,000</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Mar 21, 2025</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                <a href="#" className="text-blue-600 hover:text-blue-800 mr-3">View</a>
-                <a href="#" className="text-blue-600 hover:text-blue-800">Edit</a>
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">PR-10544</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">789 Elm St, Grandview, WA</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Robert Johnson</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Commercial</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">$275,200</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Mar 22, 2025</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                <a href="#" className="text-blue-600 hover:text-blue-800 mr-3">View</a>
-                <a href="#" className="text-blue-600 hover:text-blue-800">Edit</a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled>
-            Previous
-          </button>
-          <div className="text-sm text-gray-700">
-            Page 1 of 1
-          </div>
-          <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled>
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+// Property Search Page - now imported from separate file
 
 // Market Analysis Page
 const MarketAnalysisPage = () => (
