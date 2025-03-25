@@ -5,6 +5,7 @@ export interface PropertySearchParams {
   county?: string;
   zipCode?: string;
   neighborhood?: string;
+  neighborhoods?: string[];
   minValue?: number;
   maxValue?: number;
   minSquareFeet?: number;
@@ -12,6 +13,10 @@ export interface PropertySearchParams {
   propertyType?: string;
   yearBuiltMin?: number;
   yearBuiltMax?: number;
+  minBedrooms?: number;
+  minBathrooms?: number;
+  address?: string;
+  parcelNumber?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;

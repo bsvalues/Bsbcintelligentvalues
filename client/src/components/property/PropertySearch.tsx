@@ -7,7 +7,7 @@ import {
   Home, 
   SlidersHorizontal 
 } from 'lucide-react';
-import { usePropertySearch, PropertySearchParams, PropertyData } from '../../hooks/usePropertyData';
+import { usePropertySearch, PropertySearchParams, Property } from '../../hooks/usePropertyData';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';

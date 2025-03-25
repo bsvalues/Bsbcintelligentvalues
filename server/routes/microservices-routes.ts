@@ -72,11 +72,65 @@ router.get('/health', async (req, res) => {
 
 /**
  * POST /api/properties/search
- * Search for properties
+ * Search for properties (POST)
  */
 router.post('/properties/search', async (req, res) => {
   try {
     const searchParams = req.body;
+    const properties = await microserviceClients.propertyService.getProperties(searchParams);
+    res.json(properties);
+  } catch (error) {
+    console.error('Error searching properties:', error);
+    res.status(500).json({ error: 'Error searching properties', message: error.message });
+  }
+});
+
+/**
+ * GET /api/properties/search
+ * Search for properties (GET)
+ */
+router.get('/properties/search', async (req, res) => {
+  try {
+    // Convert query string parameters to search params object
+    const searchParams: any = {};
+    
+    // Extract and handle pagination parameters
+    if (req.query.page) searchParams.page = parseInt(req.query.page as string);
+    if (req.query.pageSize) searchParams.pageSize = parseInt(req.query.pageSize as string);
+    
+    // Extract and handle sorting parameters
+    if (req.query.sortBy) searchParams.sortBy = req.query.sortBy as string;
+    if (req.query.sortOrder) searchParams.sortOrder = req.query.sortOrder as string;
+    
+    // Extract and handle filter parameters
+    if (req.query.county) searchParams.county = req.query.county as string;
+    if (req.query.zipCode) searchParams.zipCode = req.query.zipCode as string;
+    if (req.query.neighborhood) searchParams.neighborhood = req.query.neighborhood as string;
+    if (req.query.propertyType) searchParams.propertyType = req.query.propertyType as string;
+    if (req.query.address) searchParams.address = req.query.address as string;
+    if (req.query.parcelNumber) searchParams.parcelNumber = req.query.parcelNumber as string;
+    
+    // Extract and parse numeric filter parameters
+    if (req.query.minValue) searchParams.minValue = parseInt(req.query.minValue as string);
+    if (req.query.maxValue) searchParams.maxValue = parseInt(req.query.maxValue as string);
+    if (req.query.minSquareFeet) searchParams.minSquareFeet = parseInt(req.query.minSquareFeet as string);
+    if (req.query.maxSquareFeet) searchParams.maxSquareFeet = parseInt(req.query.maxSquareFeet as string);
+    if (req.query.minYearBuilt) searchParams.yearBuiltMin = parseInt(req.query.minYearBuilt as string);
+    if (req.query.maxYearBuilt) searchParams.yearBuiltMax = parseInt(req.query.maxYearBuilt as string);
+    if (req.query.minBedrooms) searchParams.minBedrooms = parseInt(req.query.minBedrooms as string);
+    if (req.query.minBathrooms) searchParams.minBathrooms = parseFloat(req.query.minBathrooms as string);
+    
+    // Handle array parameters (like neighborhoods)
+    if (req.query.neighborhoods) {
+      if (Array.isArray(req.query.neighborhoods)) {
+        searchParams.neighborhoods = req.query.neighborhoods;
+      } else {
+        searchParams.neighborhoods = [req.query.neighborhoods];
+      }
+    }
+    
+    console.log('Property search parameters:', searchParams);
+    
     const properties = await microserviceClients.propertyService.getProperties(searchParams);
     res.json(properties);
   } catch (error) {
