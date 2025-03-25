@@ -1,340 +1,389 @@
-/**
- * PropertySearch Component
- * 
- * A search interface for filtering and finding properties
- */
-import { useState } from 'react';
-import { useProperties } from '../../hooks/usePropertyData';
-import { PropertyListing, PropertySearchFilters } from '../../types/propertyTypes';
-import { useAppContext } from '../../context/AppContext';
+import React, { useState } from 'react';
+import { 
+  Search, 
+  FileDown, 
+  Filter, 
+  MapPin, 
+  Home, 
+  SlidersHorizontal 
+} from 'lucide-react';
+import { usePropertySearch, PropertySearchParams, PropertyData } from '../../hooks/usePropertyData';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Slider } from '../ui/slider';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetDescription, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger, 
+  SheetFooter, 
+  SheetClose 
+} from '../ui/sheet';
+import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { PropertyCard, PropertyCardSkeleton } from './PropertyCard';
 import { DataLoadingState } from '../common/DataLoadingState';
-import { PropertyCard } from './PropertyCard';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
-import { Search, Filter, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { Pagination } from '@/components/ui/pagination';
+import { useAppContext } from '../../context/AppContext';
+import { Pagination } from '../ui/pagination';
 
-interface PropertySearchProps {
-  className?: string;
-  initialFilters?: PropertySearchFilters;
-  showAdvancedFilters?: boolean;
-  resultsPerPage?: number;
-}
-
-export function PropertySearch({ 
-  className = '', 
-  initialFilters = {}, 
-  showAdvancedFilters = true,
-  resultsPerPage = 10
-}: PropertySearchProps) {
-  // State for search filters, pagination
-  const [filters, setFilters] = useState<PropertySearchFilters>(initialFilters);
-  const [tempFilters, setTempFilters] = useState<PropertySearchFilters>(initialFilters);
-  const [page, setPage] = useState(1);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
+export const PropertySearch: React.FC = () => {
+  const { selectedCounty, propertyTypes } = useAppContext();
   
-  // Get county/area from context
-  const { selectedCounty, selectedArea, selectedAreaType } = useAppContext();
-  
-  // Fetch properties with filters
-  const { 
-    data, 
-    isLoading, 
-    isError, 
-    error,
-    refetch 
-  } = useProperties(page, resultsPerPage, { 
-    ...filters,
+  // Search state
+  const [searchParams, setSearchParams] = useState<PropertySearchParams>({
     county: selectedCounty,
+    page: 1,
+    pageSize: 10,
+    sortBy: 'address',
+    sortOrder: 'asc'
   });
   
-  // Apply filters
-  const applyFilters = () => {
-    setFilters(tempFilters);
-    setPage(1); // Reset to first page when filters change
-    setFiltersOpen(false);
+  // Advanced filter state
+  const [advancedFilters, setAdvancedFilters] = useState({
+    propertyType: '',
+    minValue: 0,
+    maxValue: 2000000,
+    minSquareFeet: 0,
+    maxSquareFeet: 10000,
+    minYearBuilt: 1900,
+    maxYearBuilt: new Date().getFullYear(),
+    minBedrooms: 0,
+    minBathrooms: 0,
+    neighborhoods: [] as string[]
+  });
+  
+  // Text search state
+  const [searchText, setSearchText] = useState('');
+  
+  // Fetch properties based on search params
+  const { data, isLoading, isError, error, refetch } = usePropertySearch(searchParams);
+  
+  // Apply filters and search
+  const applySearchAndFilters = () => {
+    const newParams: PropertySearchParams = {
+      ...searchParams,
+      ...advancedFilters,
+      county: selectedCounty,
+      page: 1, // Reset to first page when applying new filters
+    };
+    
+    // Handle address search
+    if (searchText) {
+      if (searchText.match(/^[0-9]{3,}-[0-9]{3,}-[0-9]{3,}$/)) {
+        // Looks like a parcel number format
+        newParams.parcelNumber = searchText;
+        newParams.address = undefined;
+      } else {
+        // Treat as address search
+        newParams.address = searchText;
+        newParams.parcelNumber = undefined;
+      }
+    } else {
+      // Clear search if empty
+      newParams.address = undefined;
+      newParams.parcelNumber = undefined;
+    }
+    
+    setSearchParams(newParams);
   };
   
-  // Reset filters
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setSearchParams({ ...searchParams, page });
+  };
+  
+  // Handle sort change
+  const handleSortChange = (field: string) => {
+    const newSortOrder = 
+      field === searchParams.sortBy && searchParams.sortOrder === 'asc' 
+        ? 'desc' 
+        : 'asc';
+    
+    setSearchParams({ 
+      ...searchParams, 
+      sortBy: field,
+      sortOrder: newSortOrder,
+      page: 1 // Reset to first page on sort change
+    });
+  };
+  
   const resetFilters = () => {
-    setTempFilters({});
-    setFilters({});
-    setPage(1);
+    setAdvancedFilters({
+      propertyType: '',
+      minValue: 0,
+      maxValue: 2000000,
+      minSquareFeet: 0,
+      maxSquareFeet: 10000,
+      minYearBuilt: 1900,
+      maxYearBuilt: new Date().getFullYear(),
+      minBedrooms: 0,
+      minBathrooms: 0,
+      neighborhoods: []
+    });
+    setSearchText('');
   };
   
-  // Get active filter count
-  const getActiveFilterCount = () => {
-    return Object.values(filters).filter(value => 
-      value !== undefined && value !== null && value !== ''
-    ).length;
-  };
-  
-  // Format price for display
-  const formatPrice = (price: number) => {
+  // Format currency for display
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-  
-  // Handle pagination change
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
+      maximumFractionDigits: 0
+    }).format(value);
   };
   
   return (
-    <div className={className}>
-      {/* Search Bar */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by address, neighborhood, or parcel ID"
-              className="pl-9"
-              value={tempFilters.address || ''}
-              onChange={(e) => setTempFilters({ ...tempFilters, address: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-            />
-          </div>
-          <Button onClick={applyFilters}>
-            Search
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className={cn("gap-1", getActiveFilterCount() > 0 ? "bg-primary/10" : "")}
-          >
-            <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Filters</span>
-            {getActiveFilterCount() > 0 && (
-              <Badge variant="secondary" className="ml-1">{getActiveFilterCount()}</Badge>
-            )}
-          </Button>
-        </div>
-        
-        {/* Advanced filters */}
-        {showAdvancedFilters && (
-          <Collapsible 
-            open={filtersOpen} 
-            onOpenChange={setFiltersOpen}
-            className="border rounded-md p-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Filters</h3>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  {filtersOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl flex items-center">
+            <Search className="h-5 w-5 mr-2" />
+            Property Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search by address or parcel number..."
+                  className="pl-9"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      applySearchAndFilters();
+                    }
+                  }}
+                />
+              </div>
             </div>
             
-            <CollapsibleContent className="pt-4">
-              <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {/* Property Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="propertyType">Property Type</Label>
-                  <Select 
-                    value={tempFilters.propertyType || ''} 
-                    onValueChange={(value) => setTempFilters({ ...tempFilters, propertyType: value })}
-                  >
-                    <SelectTrigger id="propertyType">
-                      <SelectValue placeholder="All Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
-                      <SelectItem value="Single Family">Single Family</SelectItem>
-                      <SelectItem value="Multi-Family">Multi-Family</SelectItem>
-                      <SelectItem value="Condo">Condo</SelectItem>
-                      <SelectItem value="Townhouse">Townhouse</SelectItem>
-                      <SelectItem value="Land">Land</SelectItem>
-                      <SelectItem value="Commercial">Commercial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Neighborhood */}
-                <div className="space-y-2">
-                  <Label htmlFor="neighborhood">Neighborhood</Label>
-                  <Input
-                    id="neighborhood"
-                    placeholder="Enter neighborhood"
-                    value={tempFilters.neighborhood || ''}
-                    onChange={(e) => setTempFilters({ ...tempFilters, neighborhood: e.target.value })}
-                  />
-                </div>
-                
-                {/* Bedrooms */}
-                <div className="space-y-2">
-                  <Label htmlFor="beds">Minimum Bedrooms</Label>
-                  <Select 
-                    value={tempFilters.minBeds?.toString() || ''} 
-                    onValueChange={(value) => setTempFilters({ ...tempFilters, minBeds: value ? parseInt(value) : undefined })}
-                  >
-                    <SelectTrigger id="beds">
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Any</SelectItem>
-                      <SelectItem value="1">1+</SelectItem>
-                      <SelectItem value="2">2+</SelectItem>
-                      <SelectItem value="3">3+</SelectItem>
-                      <SelectItem value="4">4+</SelectItem>
-                      <SelectItem value="5">5+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Bathrooms */}
-                <div className="space-y-2">
-                  <Label htmlFor="baths">Minimum Bathrooms</Label>
-                  <Select 
-                    value={tempFilters.minBaths?.toString() || ''} 
-                    onValueChange={(value) => setTempFilters({ ...tempFilters, minBaths: value ? parseInt(value) : undefined })}
-                  >
-                    <SelectTrigger id="baths">
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Any</SelectItem>
-                      <SelectItem value="1">1+</SelectItem>
-                      <SelectItem value="2">2+</SelectItem>
-                      <SelectItem value="3">3+</SelectItem>
-                      <SelectItem value="4">4+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Price Range */}
-                <div className="space-y-2 col-span-2">
-                  <div className="flex justify-between">
-                    <Label>Price Range</Label>
-                    <span className="text-sm text-muted-foreground">
-                      {formatPrice(tempFilters.minValue || 0)} - {formatPrice(tempFilters.maxValue || 1000000)}
-                    </span>
-                  </div>
-                  <Slider 
-                    defaultValue={[tempFilters.minValue || 0, tempFilters.maxValue || 1000000]} 
-                    max={2000000}
-                    step={10000}
-                    onValueChange={(values) => {
-                      setTempFilters({
-                        ...tempFilters,
-                        minValue: values[0],
-                        maxValue: values[1]
-                      });
-                    }}
-                  />
-                </div>
-                
-                {/* Square Footage */}
-                <div className="space-y-2">
-                  <Label htmlFor="minSqFt">Min Square Feet</Label>
-                  <Input
-                    id="minSqFt"
-                    type="number"
-                    placeholder="Min"
-                    value={tempFilters.minSqFt?.toString() || ''}
-                    onChange={(e) => setTempFilters({ 
-                      ...tempFilters, 
-                      minSqFt: e.target.value ? parseInt(e.target.value) : undefined 
-                    })}
-                  />
-                </div>
-                
-                {/* Year Built */}
-                <div className="space-y-2">
-                  <Label htmlFor="yearBuilt">Year Built Range</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="yearBuiltStart"
-                      type="number"
-                      placeholder="From"
-                      value={tempFilters.yearBuiltStart?.toString() || ''}
-                      onChange={(e) => setTempFilters({ 
-                        ...tempFilters, 
-                        yearBuiltStart: e.target.value ? parseInt(e.target.value) : undefined 
-                      })}
-                    />
-                    <Input
-                      id="yearBuiltEnd"
-                      type="number"
-                      placeholder="To"
-                      value={tempFilters.yearBuiltEnd?.toString() || ''}
-                      onChange={(e) => setTempFilters({ 
-                        ...tempFilters, 
-                        yearBuiltEnd: e.target.value ? parseInt(e.target.value) : undefined 
-                      })}
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="flex gap-2">
+              <Button onClick={applySearchAndFilters} className="min-w-24">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
               
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={resetFilters}>
-                  Reset Filters
-                </Button>
-                <Button onClick={applyFilters}>
-                  Apply Filters
-                </Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-      </div>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline">
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filters
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Advanced Filters</SheetTitle>
+                    <SheetDescription>
+                      Refine your property search with detailed filters.
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="py-4 space-y-6">
+                    {/* Property Type */}
+                    <div className="space-y-2">
+                      <Label>Property Type</Label>
+                      <Select 
+                        value={advancedFilters.propertyType}
+                        onValueChange={(value) => setAdvancedFilters({
+                          ...advancedFilters,
+                          propertyType: value
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select property type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Any</SelectItem>
+                          {propertyTypes.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Value Range */}
+                    <div className="space-y-4">
+                      <Label>Value Range</Label>
+                      <div className="px-2">
+                        <Slider
+                          defaultValue={[advancedFilters.minValue, advancedFilters.maxValue]}
+                          max={2000000}
+                          step={10000}
+                          onValueChange={(value) => setAdvancedFilters({
+                            ...advancedFilters,
+                            minValue: value[0],
+                            maxValue: value[1]
+                          })}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{formatCurrency(advancedFilters.minValue)}</span>
+                        <span>{formatCurrency(advancedFilters.maxValue)}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Square Feet Range */}
+                    <div className="space-y-4">
+                      <Label>Square Feet</Label>
+                      <div className="px-2">
+                        <Slider
+                          defaultValue={[advancedFilters.minSquareFeet, advancedFilters.maxSquareFeet]}
+                          max={10000}
+                          step={100}
+                          onValueChange={(value) => setAdvancedFilters({
+                            ...advancedFilters,
+                            minSquareFeet: value[0],
+                            maxSquareFeet: value[1]
+                          })}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{advancedFilters.minSquareFeet} sq ft</span>
+                        <span>{advancedFilters.maxSquareFeet} sq ft</span>
+                      </div>
+                    </div>
+                    
+                    {/* Year Built Range */}
+                    <div className="space-y-4">
+                      <Label>Year Built</Label>
+                      <div className="px-2">
+                        <Slider
+                          defaultValue={[advancedFilters.minYearBuilt, advancedFilters.maxYearBuilt]}
+                          min={1900}
+                          max={new Date().getFullYear()}
+                          step={1}
+                          onValueChange={(value) => setAdvancedFilters({
+                            ...advancedFilters,
+                            minYearBuilt: value[0],
+                            maxYearBuilt: value[1]
+                          })}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{advancedFilters.minYearBuilt}</span>
+                        <span>{advancedFilters.maxYearBuilt}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Bedrooms & Bathrooms */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bedrooms</Label>
+                        <Select 
+                          value={advancedFilters.minBedrooms.toString()}
+                          onValueChange={(value) => setAdvancedFilters({
+                            ...advancedFilters,
+                            minBedrooms: parseInt(value)
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Any</SelectItem>
+                            <SelectItem value="1">1+</SelectItem>
+                            <SelectItem value="2">2+</SelectItem>
+                            <SelectItem value="3">3+</SelectItem>
+                            <SelectItem value="4">4+</SelectItem>
+                            <SelectItem value="5">5+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Bathrooms</Label>
+                        <Select 
+                          value={advancedFilters.minBathrooms.toString()}
+                          onValueChange={(value) => setAdvancedFilters({
+                            ...advancedFilters,
+                            minBathrooms: parseInt(value)
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Any</SelectItem>
+                            <SelectItem value="1">1+</SelectItem>
+                            <SelectItem value="1.5">1.5+</SelectItem>
+                            <SelectItem value="2">2+</SelectItem>
+                            <SelectItem value="2.5">2.5+</SelectItem>
+                            <SelectItem value="3">3+</SelectItem>
+                            <SelectItem value="4">4+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <SheetFooter className="flex justify-between">
+                    <Button variant="outline" onClick={resetFilters}>
+                      Reset
+                    </Button>
+                    <SheetClose asChild>
+                      <Button onClick={applySearchAndFilters}>
+                        Apply Filters
+                      </Button>
+                    </SheetClose>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       
-      {/* Search Results */}
       <DataLoadingState
         isLoading={isLoading}
         isError={isError}
-        isEmpty={!data || data.properties.length === 0}
         error={error as Error}
-        onRetry={() => refetch()}
-        emptyText="No properties found matching your search criteria."
+        onRetry={refetch}
       >
-        {data && (
-          <>
-            <div className="text-sm text-muted-foreground mb-4">
-              Found {data.total} properties in {selectedCounty} County
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.properties.map((property) => (
-                <PropertyCard 
-                  key={property.id} 
-                  property={property} 
-                  variant="compact"
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data?.properties && data.properties.length > 0 ? (
+              data.properties.map((property) => (
+                <PropertyCard
+                  key={property.id}
+                  property={property}
+                  showCompareButton
                 />
-              ))}
-            </div>
-            
-            {/* Pagination */}
-            {data.totalPages > 1 && (
-              <div className="flex justify-center mt-8">
-                <Pagination
-                  currentPage={page}
-                  totalPages={data.totalPages}
-                  onPageChange={handlePageChange}
-                />
+              ))
+            ) : (
+              <div className="col-span-full p-8 text-center">
+                <h3 className="text-lg font-medium">No properties found</h3>
+                <p className="text-muted-foreground mt-1">
+                  Try adjusting your search criteria or filters.
+                </p>
               </div>
             )}
-          </>
-        )}
+          </div>
+          
+          {data && data.properties.length > 0 && (
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                Showing {(searchParams.page - 1) * searchParams.pageSize + 1}-
+                {Math.min(searchParams.page * searchParams.pageSize, data.total)} of {data.total} properties
+              </div>
+              
+              <Pagination
+                page={searchParams.page || 1}
+                count={Math.ceil(data.total / searchParams.pageSize)}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
+        </div>
       </DataLoadingState>
     </div>
   );
-}
+};

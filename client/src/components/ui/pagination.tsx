@@ -1,139 +1,115 @@
-/**
- * Pagination Component
- * 
- * A component for navigating between pages of results
- */
-import { Button } from './button';
+import React from 'react';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Button } from './button';
 
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
+export interface PaginationProps {
+  page: number;
+  count: number;
   onPageChange: (page: number) => void;
-  showEdges?: boolean;
-  showControls?: boolean;
-  visiblePageCount?: number;
+  siblingCount?: number;
 }
 
-export function Pagination({
-  currentPage,
-  totalPages,
+export const Pagination: React.FC<PaginationProps> = ({
+  page,
+  count,
   onPageChange,
-  showEdges = true,
-  showControls = true,
-  visiblePageCount = 5,
-}: PaginationProps) {
-  // Generate array of page numbers to display
-  const getPageNumbers = (): (number | 'ellipsis')[] => {
-    // If totalPages is 7 or less, show all pages
-    if (totalPages <= visiblePageCount + 2) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+  siblingCount = 1,
+}) => {
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const totalNumbers = siblingCount * 2 + 3; // siblings on each side + current + first + last
+    const totalBlocks = totalNumbers + 2; // +2 for the dots
+
+    if (count <= totalBlocks) {
+      return Array.from({ length: count }, (_, i) => i + 1);
     }
-    
-    const pages: (number | 'ellipsis')[] = [];
-    
-    // Always show first page
-    if (showEdges) {
-      pages.push(1);
+
+    const leftSiblingIndex = Math.max(page - siblingCount, 1);
+    const rightSiblingIndex = Math.min(page + siblingCount, count);
+
+    const shouldShowLeftDots = leftSiblingIndex > 2;
+    const shouldShowRightDots = rightSiblingIndex < count - 1;
+
+    if (!shouldShowLeftDots && shouldShowRightDots) {
+      const leftRange = Array.from({ length: totalNumbers }, (_, i) => i + 1);
+      return [...leftRange, -1, count];
     }
-    
-    // Calculate start and end of visible pages
-    const sidePages = Math.floor(visiblePageCount / 2);
-    let startPage = Math.max(showEdges ? 2 : 1, currentPage - sidePages);
-    let endPage = Math.min(showEdges ? totalPages - 1 : totalPages, startPage + visiblePageCount - 1);
-    
-    // Adjust if we're near the end
-    if (endPage - startPage < visiblePageCount - 1) {
-      startPage = Math.max(showEdges ? 2 : 1, endPage - visiblePageCount + 1);
+
+    if (shouldShowLeftDots && !shouldShowRightDots) {
+      const rightRange = Array.from(
+        { length: totalNumbers },
+        (_, i) => count - totalNumbers + i + 1
+      );
+      return [1, -1, ...rightRange];
     }
-    
-    // Add leading ellipsis if needed
-    if (showEdges && startPage > 2) {
-      pages.push('ellipsis');
+
+    if (shouldShowLeftDots && shouldShowRightDots) {
+      const middleRange = Array.from(
+        { length: rightSiblingIndex - leftSiblingIndex + 1 },
+        (_, i) => leftSiblingIndex + i
+      );
+      return [1, -1, ...middleRange, -2, count];
     }
-    
-    // Add visible pages
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    
-    // Add trailing ellipsis if needed
-    if (showEdges && endPage < totalPages - 1) {
-      pages.push('ellipsis');
-    }
-    
-    // Always show last page
-    if (showEdges) {
-      pages.push(totalPages);
-    }
-    
-    return pages;
+
+    return Array.from({ length: count }, (_, i) => i + 1);
   };
-  
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    // Don't do anything if clicking current page
-    if (page === currentPage) return;
-    
-    // Don't go beyond limits
-    if (page < 1 || page > totalPages) return;
-    
-    // Call the provided callback
-    onPageChange(page);
-  };
-  
+
   const pageNumbers = getPageNumbers();
-  
+
   return (
-    <div className="flex items-center justify-center gap-1">
-      {/* Previous button */}
-      {showControls && (
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          aria-label="Previous page"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-      )}
+    <nav className="flex items-center justify-center space-x-1" aria-label="Pagination">
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
       
-      {/* Page numbers */}
-      {pageNumbers.map((page, index) => 
-        page === 'ellipsis' ? (
-          <div 
-            key={`ellipsis-${index}`} 
-            className="flex items-center justify-center w-9 h-9"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </div>
-        ) : (
+      {pageNumbers.map((pageNumber, i) => {
+        if (pageNumber === -1 || pageNumber === -2) {
+          return (
+            <Button
+              key={`ellipsis-${i}`}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 cursor-default"
+              disabled
+              aria-hidden="true"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          );
+        }
+        
+        return (
           <Button
-            key={page}
-            variant={currentPage === page ? 'default' : 'outline'}
+            key={pageNumber}
+            variant={page === pageNumber ? 'default' : 'outline'}
             size="icon"
-            onClick={() => handlePageChange(page)}
-            aria-label={`Page ${page}`}
-            aria-current={currentPage === page ? 'page' : undefined}
+            className="h-8 w-8"
+            onClick={() => onPageChange(pageNumber)}
+            aria-current={page === pageNumber ? 'page' : undefined}
+            aria-label={`Page ${pageNumber}`}
           >
-            {page}
+            {pageNumber}
           </Button>
-        )
-      )}
+        );
+      })}
       
-      {/* Next button */}
-      {showControls && (
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          aria-label="Next page"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      )}
-    </div>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onPageChange(Math.min(count, page + 1))}
+        disabled={page === count}
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </nav>
   );
-}
+};

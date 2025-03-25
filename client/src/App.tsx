@@ -6,9 +6,11 @@
 import { Route, Switch } from 'wouter';
 import { Suspense, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from '@/components/ui/toaster';
+import { ToastProvider } from '@/components/ui/use-toast';
 import Footer from './components/layout/Footer';
 import { Building2, Search, BarChart4, Home, Map, FileText, Settings, HelpCircle, Bell } from 'lucide-react';
+import ToastTest from './components/common/ToastTest';
 
 // Simple mock of QueryClient until we properly configure it
 const queryClient = {
@@ -119,48 +121,56 @@ const MobileNavLink = ({ href, icon, label }: { href: string; icon: React.ReactN
 );
 
 // Page components directly in this file
-const HomePage = () => (
-  <div className="container mx-auto p-8">
-    <header className="mb-10">
-      <h1 className="text-3xl font-bold mb-4">BS Values - Tax Assessment Platform</h1>
-      <p className="text-lg text-gray-600">Welcome to the county's comprehensive tax assessment system</p>
-    </header>
-    
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-      <DashboardCard 
-        icon={<Building2 className="h-8 w-8 text-blue-500" />}
-        title="Property Assessment"
-        description="Manage and review property valuations with advanced tools."
-        linkText="Open Assessment Dashboard"
-        linkHref="/tax-assessment-dashboard"
-      />
-      <DashboardCard 
-        icon={<BarChart4 className="h-8 w-8 text-green-500" />}
-        title="Market Analysis"
-        description="Analyze real estate market trends and comparable properties."
-        linkText="View Market Data"
-        linkHref="/market-analysis"
-      />
-      <DashboardCard 
-        icon={<FileText className="h-8 w-8 text-purple-500" />}
-        title="Reports & Analytics"
-        description="Generate custom reports and data exports for your county."
-        linkText="Access Reports"
-        linkHref="/reports"
-      />
-    </div>
-    
-    <div className="bg-blue-50 rounded-lg p-6 border border-blue-100">
-      <h2 className="text-xl font-semibold mb-3 text-blue-800">Quick Status</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatusCard label="Properties" value="24,521" change="+12" />
-        <StatusCard label="Assessments" value="22,830" change="+65" />
-        <StatusCard label="Appeals" value="142" change="-8" />
-        <StatusCard label="Valuation Total" value="$4.2B" change="+5.2%" />
+const HomePage = () => {
+  // Use import statement at the top of the file instead of require
+  return (
+    <div className="container mx-auto p-8">
+      <header className="mb-10">
+        <h1 className="text-3xl font-bold mb-4">BS Values - Tax Assessment Platform</h1>
+        <p className="text-lg text-gray-600">Welcome to the county's comprehensive tax assessment system</p>
+      </header>
+      
+      {/* Toast Test Component */}
+      <div className="mb-8">
+        <ToastTest />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <DashboardCard 
+          icon={<Building2 className="h-8 w-8 text-blue-500" />}
+          title="Property Assessment"
+          description="Manage and review property valuations with advanced tools."
+          linkText="Open Assessment Dashboard"
+          linkHref="/tax-assessment-dashboard"
+        />
+        <DashboardCard 
+          icon={<BarChart4 className="h-8 w-8 text-green-500" />}
+          title="Market Analysis"
+          description="Analyze real estate market trends and comparable properties."
+          linkText="View Market Data"
+          linkHref="/market-analysis"
+        />
+        <DashboardCard 
+          icon={<FileText className="h-8 w-8 text-purple-500" />}
+          title="Reports & Analytics"
+          description="Generate custom reports and data exports for your county."
+          linkText="Access Reports"
+          linkHref="/reports"
+        />
+      </div>
+      
+      <div className="bg-blue-50 rounded-lg p-6 border border-blue-100">
+        <h2 className="text-xl font-semibold mb-3 text-blue-800">Quick Status</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatusCard label="Properties" value="24,521" change="+12" />
+          <StatusCard label="Assessments" value="22,830" change="+65" />
+          <StatusCard label="Appeals" value="142" change="-8" />
+          <StatusCard label="Valuation Total" value="$4.2B" change="+5.2%" />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Dashboard card for homepage
 const DashboardCard = ({ 
@@ -542,72 +552,74 @@ const NotFoundPage = () => (
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <NavBar />
-        <main className="flex-grow">
-          <Suspense fallback={<LoadingSpinner />}>
-            <Switch>
-              <Route path="/" component={HomePage} />
-              <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
-              <Route path="/property-search" component={PropertySearchPage} />
-              <Route path="/market-analysis" component={MarketAnalysisPage} />
-              <Route path="/map" component={() => (
-                <div className="container mx-auto p-8">
-                  <h1 className="text-3xl font-bold mb-6">Property Map</h1>
-                  <p className="text-gray-600 mb-8">Interactive map of all properties in the county.</p>
-                  <div className="bg-white h-96 rounded-lg shadow-sm border border-gray-200 flex items-center justify-center">
-                    <div className="text-center">
-                      <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">Interactive property map will be displayed here</p>
+      <ToastProvider>
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
+          <NavBar />
+          <main className="flex-grow">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Switch>
+                <Route path="/" component={HomePage} />
+                <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
+                <Route path="/property-search" component={PropertySearchPage} />
+                <Route path="/market-analysis" component={MarketAnalysisPage} />
+                <Route path="/map" component={() => (
+                  <div className="container mx-auto p-8">
+                    <h1 className="text-3xl font-bold mb-6">Property Map</h1>
+                    <p className="text-gray-600 mb-8">Interactive map of all properties in the county.</p>
+                    <div className="bg-white h-96 rounded-lg shadow-sm border border-gray-200 flex items-center justify-center">
+                      <div className="text-center">
+                        <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500">Interactive property map will be displayed here</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )} />
-              <Route path="/reports" component={() => (
-                <div className="container mx-auto p-8">
-                  <h1 className="text-3xl font-bold mb-6">Reports & Analytics</h1>
-                  <p className="text-gray-600 mb-8">Generate custom reports and analytics for your county.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <ReportCard 
-                      title="Assessment Summary" 
-                      description="Overview of all property assessments with totals and averages"
-                      icon={<FileText className="h-8 w-8 text-blue-500" />}
-                    />
-                    <ReportCard 
-                      title="Neighborhood Analysis" 
-                      description="Compare property values across different neighborhoods"
-                      icon={<BarChart4 className="h-8 w-8 text-green-500" />}
-                    />
-                    <ReportCard 
-                      title="Appeals Report" 
-                      description="Summary of all active appeals and their current status"
-                      icon={<AlertCircle className="h-8 w-8 text-orange-500" />}
-                    />
-                    <ReportCard 
-                      title="Tax Revenue Forecast" 
-                      description="Projected tax revenue based on current assessments"
-                      icon={<TrendingUp className="h-8 w-8 text-purple-500" />}
-                    />
-                    <ReportCard 
-                      title="Property Type Distribution" 
-                      description="Breakdown of properties by type across the county"
-                      icon={<PieChart className="h-8 w-8 text-indigo-500" />}
-                    />
-                    <ReportCard 
-                      title="Custom Report" 
-                      description="Create a custom report with specific parameters"
-                      icon={<Settings className="h-8 w-8 text-gray-500" />}
-                    />
+                )} />
+                <Route path="/reports" component={() => (
+                  <div className="container mx-auto p-8">
+                    <h1 className="text-3xl font-bold mb-6">Reports & Analytics</h1>
+                    <p className="text-gray-600 mb-8">Generate custom reports and analytics for your county.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <ReportCard 
+                        title="Assessment Summary" 
+                        description="Overview of all property assessments with totals and averages"
+                        icon={<FileText className="h-8 w-8 text-blue-500" />}
+                      />
+                      <ReportCard 
+                        title="Neighborhood Analysis" 
+                        description="Compare property values across different neighborhoods"
+                        icon={<BarChart4 className="h-8 w-8 text-green-500" />}
+                      />
+                      <ReportCard 
+                        title="Appeals Report" 
+                        description="Summary of all active appeals and their current status"
+                        icon={<AlertCircle className="h-8 w-8 text-orange-500" />}
+                      />
+                      <ReportCard 
+                        title="Tax Revenue Forecast" 
+                        description="Projected tax revenue based on current assessments"
+                        icon={<TrendingUp className="h-8 w-8 text-purple-500" />}
+                      />
+                      <ReportCard 
+                        title="Property Type Distribution" 
+                        description="Breakdown of properties by type across the county"
+                        icon={<PieChart className="h-8 w-8 text-indigo-500" />}
+                      />
+                      <ReportCard 
+                        title="Custom Report" 
+                        description="Create a custom report with specific parameters"
+                        icon={<Settings className="h-8 w-8 text-gray-500" />}
+                      />
+                    </div>
                   </div>
-                </div>
-              )} />
-              <Route component={NotFoundPage} />
-            </Switch>
-          </Suspense>
-        </main>
-        <Footer />
-      </div>
-      <Toaster />
+                )} />
+                <Route component={NotFoundPage} />
+              </Switch>
+            </Suspense>
+          </main>
+          <Footer />
+        </div>
+        <Toaster />
+      </ToastProvider>
     </QueryClientProvider>
   );
 };

@@ -1,98 +1,198 @@
 import { QueryClient } from '@tanstack/react-query';
-import { toast } from '../components/ui/use-toast';
+// Import the toast directly without using the module resolution
+import { toast } from '@/components/ui/use-toast';
 
-// Define the base API URL
-const API_BASE_URL = '';
+// Default options for fetch calls
+const defaultOptions = {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
 
-// Interface for apiRequest options
-interface ApiRequestOptions extends RequestInit {
-  data?: any;
-}
-
-// Create a new QueryClient instance with default settings
+// Create a client
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: false, // disable refetch on window focus
+      retry: 1, // retry failed queries once
       staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
     },
   },
 });
 
-// Generic API request function for making fetch requests
+/**
+ * Function to make API requests with proper error handling
+ * @param url The API endpoint to call
+ * @param options Optional fetch options
+ * @returns The API response
+ */
 export async function apiRequest<T>(
-  endpoint: string,
-  options: ApiRequestOptions = {}
+  url: string,
+  options: RequestInit = {}
 ): Promise<T> {
   try {
-    const { data, ...fetchOptions } = options;
-    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-    
-    // Set up default headers
-    const headers = new Headers(fetchOptions.headers);
-    
-    // If not already set and we have data, set the content type
-    if (data && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
-    }
-    
-    // Create the fetch request
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-      body: data ? JSON.stringify(data) : fetchOptions.body,
-    });
-    
-    // Handle non-200 responses
+    // Combine default and custom options
+    const fetchOptions = {
+      ...defaultOptions,
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...options.headers,
+      },
+    };
+
+    const response = await fetch(url, fetchOptions);
+
+    // Check if the response is OK
     if (!response.ok) {
-      // Try to get error details from response
-      let errorMessage = `Request failed with status ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        // Ignore JSON parsing errors in the error response
-      }
+      let errorMessage = `API Error: ${response.status} ${response.statusText}`;
       
-      // Create and throw an error
-      const error = new Error(errorMessage);
-      (error as any).status = response.status;
-      throw error;
+      try {
+        // Try to parse error details from the response
+        const errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If we can't parse the error response, use the default message
+      }
+
+      throw new Error(errorMessage);
     }
-    
-    // For 204 No Content, return null
-    if (response.status === 204) {
+
+    // Check if response is empty
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json() as T;
+    } else {
       return null as unknown as T;
     }
-    
-    // Parse the JSON response
-    return await response.json();
   } catch (error) {
-    // Display a toast notification for the error
+    console.error('API Request Error:', error);
+    
+    // Show a toast notification with the error
     toast({
       title: 'Error',
-      description: error instanceof Error ? error.message : 'An unknown error occurred',
+      description: error instanceof Error ? error.message : 'An unexpected error occurred',
       variant: 'destructive',
     });
     
-    // Re-throw the error for the caller to handle
     throw error;
   }
 }
 
-// Set up the default queryFn that can be used by the useQuery hook
-queryClient.setDefaultOptions({
-  queries: {
-    queryFn: async ({ queryKey }) => {
-      // The first element of the query key should be the endpoint
-      const endpoint = Array.isArray(queryKey) ? queryKey[0] : queryKey;
-      
-      if (typeof endpoint !== 'string') {
-        throw new Error('Invalid query key: endpoint must be a string');
-      }
-      
-      return apiRequest(endpoint);
-    },
-  },
-});
+/**
+ * Function to make POST requests
+ * @param url The API endpoint
+ * @param data The data to send
+ * @returns The API response
+ */
+export async function postRequest<T, R = any>(url: string, data: R): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Function to make PUT requests
+ * @param url The API endpoint
+ * @param data The data to send
+ * @returns The API response
+ */
+export async function putRequest<T, R = any>(url: string, data: R): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Function to make PATCH requests
+ * @param url The API endpoint
+ * @param data The data to send
+ * @returns The API response
+ */
+export async function patchRequest<T, R = any>(url: string, data: R): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Function to make DELETE requests
+ * @param url The API endpoint
+ * @returns The API response
+ */
+export async function deleteRequest<T>(url: string): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Function to download a file
+ * @param url The API endpoint
+ * @param filename The name to save the file as
+ */
+export async function downloadFile(url: string, filename: string): Promise<void> {
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error('Download Error:', error);
+    
+    toast({
+      title: 'Download Failed',
+      description: error instanceof Error ? error.message : 'An unexpected error occurred',
+      variant: 'destructive',
+    });
+    
+    throw error;
+  }
+}
+
+/**
+ * Function to upload a file
+ * @param url The API endpoint
+ * @param file The file to upload
+ * @param fieldName The name of the form field
+ * @param additionalData Additional form data to include
+ * @returns The API response
+ */
+export async function uploadFile<T>(
+  url: string,
+  file: File,
+  fieldName: string = 'file',
+  additionalData: Record<string, string> = {}
+): Promise<T> {
+  const formData = new FormData();
+  formData.append(fieldName, file);
+  
+  // Add any additional form data
+  Object.entries(additionalData).forEach(([key, value]) => {
+    formData.append(key, value);
+  });
+  
+  return apiRequest<T>(url, {
+    method: 'POST',
+    body: formData,
+    headers: {}, // Remove Content-Type header, browser will set it for FormData
+  });
+}
