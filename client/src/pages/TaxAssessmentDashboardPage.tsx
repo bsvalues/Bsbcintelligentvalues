@@ -14,7 +14,11 @@ import {
   BarChart3,
   CalendarRange,
   Users,
-  FileBarChart
+  FileBarChart,
+  DollarSign,
+  Percent,
+  Building2,
+  ShieldAlert
 } from 'lucide-react';
 
 import {
@@ -56,6 +60,7 @@ import { Progress } from '@/components/ui/progress';
 import { PieChart, PieChartProps } from '../components/charts/PieChart';
 import { TaxCalculatorWidget } from '../components/widgets/TaxCalculatorWidget';
 import { Heading } from '../components/ui/heading';
+import { StatisticCard } from '../components/dashboard/StatisticCard';
 
 // Page component for the Tax Assessment Dashboard
 const TaxAssessmentDashboardPage = () => {
@@ -152,7 +157,20 @@ const TaxAssessmentDashboardPage = () => {
     <div className="container mx-auto py-6">
       <Heading 
         title="Tax Assessment Dashboard" 
-        description="Comprehensive view of county tax assessment data" 
+        description="Comprehensive view of county tax assessment data"
+        icon={<FileBarChart size={24} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <FileText className="mr-1 h-4 w-4" />
+              Export Report
+            </Button>
+            <Button size="sm">
+              <Clock className="mr-1 h-4 w-4" />
+              Schedule Update
+            </Button>
+          </div>
+        }
       />
       <div className="p-4 md:p-6 space-y-6">
         {/* Top controls */}
@@ -205,63 +223,36 @@ const TaxAssessmentDashboardPage = () => {
         
         {/* Key metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Assessed Value</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {taxData ? formatCurrency(taxData.assessedValue) : '—'}
-              </div>
-              {taxData && (
-                <p className={`text-xs ${getGrowthColorClass(taxData.yearOverYearGrowth)}`}>
-                  {taxData.yearOverYearGrowth > 0 ? '↑' : '↓'} {formatPercent(Math.abs(taxData.yearOverYearGrowth))} from previous year
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <StatisticCard
+            title="Total Assessed Value"
+            value={taxData ? formatCurrency(taxData.assessedValue) : '—'}
+            icon={<DollarSign size={18} />}
+            trend={taxData ? {
+              value: taxData.yearOverYearGrowth,
+              label: `${formatPercent(Math.abs(taxData.yearOverYearGrowth))} from previous year`
+            } : undefined}
+          />
           
-          <Card className="shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Tax Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {taxData ? formatCurrency(taxData.taxRevenue) : '—'}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Collection Rate: {taxData ? `${taxData.collectionRate}%` : '—'}
-              </div>
-            </CardContent>
-          </Card>
+          <StatisticCard
+            title="Tax Revenue"
+            value={taxData ? formatCurrency(taxData.taxRevenue) : '—'}
+            icon={<Percent size={18} />}
+            subtitle={`Collection Rate: ${taxData ? taxData.collectionRate : 0}%`}
+          />
           
-          <Card className="shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {taxData ? taxData.totalProperties.toLocaleString() : '—'}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Appeal Rate: {taxData ? `${taxData.appealRate}%` : '—'}
-              </div>
-            </CardContent>
-          </Card>
+          <StatisticCard
+            title="Total Properties"
+            value={taxData ? taxData.totalProperties.toLocaleString() : '—'}
+            icon={<Building2 size={18} />}
+            subtitle={`Appeal Rate: ${taxData ? taxData.appealRate : 0}%`}
+          />
           
-          <Card className="shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Exemption Value</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {taxData ? formatCurrency(taxData.exemptionTotal) : '—'}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {taxData ? formatPercent(taxData.exemptionTotal / taxData.assessedValue * 100) : '—'} of total value
-              </div>
-            </CardContent>
-          </Card>
+          <StatisticCard
+            title="Exemption Value"
+            value={taxData ? formatCurrency(taxData.exemptionTotal) : '—'}
+            icon={<ShieldAlert size={18} />}
+            subtitle={taxData ? `${formatPercent(taxData.exemptionTotal / taxData.assessedValue * 100)} of total value` : '—'}
+          />
         </div>
         
         {/* Main dashboard content tabs */}
