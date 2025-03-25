@@ -38,6 +38,7 @@ import HelpCenterPage from './pages/HelpCenterPage';
 import DevAuthLoginPage from './pages/DevAuthLoginPage';
 import DevAuthAdminPage from './pages/DevAuthAdminPage';
 import UserAdminPage from './pages/UserAdminPage';
+import TaxAssessmentDashboardPage from './pages/TaxAssessmentDashboardPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { 
@@ -128,6 +129,7 @@ const App = () => {
               <Route path="/adaptive-color-scheme" component={AdaptiveColorSchemePage} />
               <Route path="/mcp-tool" component={MCPToolPage} />
               <Route path="/recommendations" component={RecommendationsPage} />
+              <Route path="/tax-assessment-dashboard" component={TaxAssessmentDashboardPage} />
               <Route path="/system/monitor" component={SystemMonitorPage} />
               <Route path="/fix-my-screen/help" component={BlackScreenHelpPage} />
               <Route path="/help" component={HelpCenterPage} />

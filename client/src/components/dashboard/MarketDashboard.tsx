@@ -76,26 +76,121 @@ export default function MarketDashboard() {
   });
 
   return (
-    <div className="space-y-4">
-      <Card>
+    <div className="space-y-6 p-4">
+      {/* Top Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Median Property Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${marketData?.median_price?.toLocaleString() || 'Loading...'}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {marketData?.price_trends?.median_price?.change_pct > 0 
+                ? `↑ ${marketData?.price_trends?.median_price?.change_pct}% from last year` 
+                : marketData?.price_trends?.median_price?.change_pct < 0 
+                  ? `↓ ${Math.abs(marketData?.price_trends?.median_price?.change_pct)}% from last year`
+                  : 'No change from last year'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Listings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{marketData?.total_active_listings?.toLocaleString() || 'Loading...'}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {marketData?.new_listings_last_30_days} new in last 30 days
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Days on Market</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{marketData?.avg_days_on_market || 'Loading...'}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {marketData?.current_condition || 'Analyzing market conditions'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Price per Sq. Ft.</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${marketData?.price_per_sqft || 'Loading...'}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Affordability Index: {marketData?.affordability_index || 'Calculating...'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Market Trends Chart */}
+      <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Market Overview - {selectedArea}</CardTitle>
+          <CardTitle className="text-lg">Market Trends - {selectedArea}</CardTitle>
         </CardHeader>
         <CardContent>
-          {marketData && (
+          {marketData ? (
             <LineChart width={600} height={300} data={marketData.trends}>
               <XAxis dataKey="date" />
               <YAxis />
-              <CartesianGrid />
+              <CartesianGrid strokeDasharray="3 3" />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey="price" stroke="#8884d8" />
+              <Line type="monotone" dataKey="price" stroke="#8884d8" strokeWidth={2} />
+              <Line type="monotone" dataKey="volume" stroke="#82ca9d" strokeWidth={2} />
             </LineChart>
+          ) : (
+            <div className="h-[300px] w-full flex items-center justify-center bg-muted/20 rounded-md">
+              <p className="text-muted-foreground">Loading chart data...</p>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <TrendPredictionWidget area={selectedArea} />
+      {/* Prediction Widget and Area Comparisons in a 2-column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg">Forecasted Trends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendPredictionWidget selectedArea={selectedArea} selectedAreaType="zip" />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg">Area Comparisons</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span>Median Home Price</span>
+                <span className="font-medium">{selectedArea} vs. County Average</span>
+              </div>
+              <div className="w-full bg-muted h-4 rounded-full overflow-hidden">
+                <div className="bg-primary h-full" style={{ width: `${marketData?.affordability_index ? Math.min(marketData.affordability_index * 100, 100) : 50}%` }}></div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {marketData?.affordability_index && marketData.affordability_index > 1 
+                  ? `${selectedArea} is ${Math.round((marketData.affordability_index - 1) * 100)}% higher than county average` 
+                  : marketData?.affordability_index 
+                    ? `${selectedArea} is ${Math.round((1 - marketData.affordability_index) * 100)}% lower than county average`
+                    : 'Comparing with county average...'}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

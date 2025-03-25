@@ -36,7 +36,7 @@ const RealEstateAnalyticsPage = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center animate-in slide-in-from-left-5 duration-500">
             <LucideHome className="h-6 w-6 mr-2 text-primary animate-pulse-glow" />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent">IntelligentEstate</h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent">BS Values</h1>
           </div>
           
           <nav className="hidden md:flex space-x-6">
