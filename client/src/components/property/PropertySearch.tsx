@@ -212,7 +212,12 @@ export const PropertySearch: React.FC = () => {
                     
                     {/* Value Range */}
                     <div className="space-y-4">
-                      <Label>Value Range</Label>
+                      <div className="flex justify-between">
+                        <Label>Assessed Value Range</Label>
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(advancedFilters.minValue)} - {formatCurrency(advancedFilters.maxValue)}
+                        </div>
+                      </div>
                       <div className="px-2">
                         <Slider
                           defaultValue={[advancedFilters.minValue, advancedFilters.maxValue]}
@@ -225,15 +230,44 @@ export const PropertySearch: React.FC = () => {
                           })}
                         />
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>{formatCurrency(advancedFilters.minValue)}</span>
-                        <span>{formatCurrency(advancedFilters.maxValue)}</span>
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="minValue" className="text-xs whitespace-nowrap">Min Value</Label>
+                          <Input 
+                            id="minValue"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.minValue}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              minValue: Number(e.target.value)
+                            })}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="maxValue" className="text-xs whitespace-nowrap">Max Value</Label>
+                          <Input 
+                            id="maxValue"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.maxValue}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              maxValue: Number(e.target.value)
+                            })}
+                          />
+                        </div>
                       </div>
                     </div>
                     
                     {/* Square Feet Range */}
                     <div className="space-y-4">
-                      <Label>Square Feet</Label>
+                      <div className="flex justify-between">
+                        <Label>Square Feet</Label>
+                        <div className="text-xs text-muted-foreground">
+                          {advancedFilters.minSquareFeet} - {advancedFilters.maxSquareFeet} sq ft
+                        </div>
+                      </div>
                       <div className="px-2">
                         <Slider
                           defaultValue={[advancedFilters.minSquareFeet, advancedFilters.maxSquareFeet]}
@@ -246,15 +280,44 @@ export const PropertySearch: React.FC = () => {
                           })}
                         />
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>{advancedFilters.minSquareFeet} sq ft</span>
-                        <span>{advancedFilters.maxSquareFeet} sq ft</span>
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="minSqFt" className="text-xs whitespace-nowrap">Min Sq Ft</Label>
+                          <Input 
+                            id="minSqFt"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.minSquareFeet}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              minSquareFeet: Number(e.target.value)
+                            })}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="maxSqFt" className="text-xs whitespace-nowrap">Max Sq Ft</Label>
+                          <Input 
+                            id="maxSqFt"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.maxSquareFeet}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              maxSquareFeet: Number(e.target.value)
+                            })}
+                          />
+                        </div>
                       </div>
                     </div>
                     
                     {/* Year Built Range */}
                     <div className="space-y-4">
-                      <Label>Year Built</Label>
+                      <div className="flex justify-between">
+                        <Label>Year Built</Label>
+                        <div className="text-xs text-muted-foreground">
+                          {advancedFilters.minYearBuilt} - {advancedFilters.maxYearBuilt}
+                        </div>
+                      </div>
                       <div className="px-2">
                         <Slider
                           defaultValue={[advancedFilters.minYearBuilt, advancedFilters.maxYearBuilt]}
@@ -268,9 +331,33 @@ export const PropertySearch: React.FC = () => {
                           })}
                         />
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>{advancedFilters.minYearBuilt}</span>
-                        <span>{advancedFilters.maxYearBuilt}</span>
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="minYear" className="text-xs whitespace-nowrap">Min Year</Label>
+                          <Input 
+                            id="minYear"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.minYearBuilt}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              minYearBuilt: Number(e.target.value)
+                            })}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="maxYear" className="text-xs whitespace-nowrap">Max Year</Label>
+                          <Input 
+                            id="maxYear"
+                            type="number" 
+                            className="w-24 h-8"
+                            value={advancedFilters.maxYearBuilt}
+                            onChange={(e) => setAdvancedFilters({
+                              ...advancedFilters,
+                              maxYearBuilt: Number(e.target.value)
+                            })}
+                          />
+                        </div>
                       </div>
                     </div>
                     
@@ -322,6 +409,94 @@ export const PropertySearch: React.FC = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    {/* Neighborhoods section */}
+                    <div className="space-y-4 border-t pt-4">
+                      <Label className="text-base">Neighborhoods</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        {['Eastside', 'Westside', 'Downtown', 'North Hills', 'South Valley', 'Harrison Heights'].map((neighborhood) => (
+                          <div key={neighborhood} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`neighborhood-${neighborhood}`}
+                              checked={advancedFilters.neighborhoods.includes(neighborhood)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters({
+                                    ...advancedFilters,
+                                    neighborhoods: [...advancedFilters.neighborhoods, neighborhood]
+                                  });
+                                } else {
+                                  setAdvancedFilters({
+                                    ...advancedFilters,
+                                    neighborhoods: advancedFilters.neighborhoods.filter(n => n !== neighborhood)
+                                  });
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`neighborhood-${neighborhood}`}
+                              className="text-sm font-normal"
+                            >
+                              {neighborhood}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Additional property features section */}
+                    <div className="space-y-4 border-t pt-4">
+                      <Label className="text-base">Property Features</Label>
+                      <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-garage" />
+                          <Label htmlFor="feature-garage" className="text-sm font-normal">Garage</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-pool" />
+                          <Label htmlFor="feature-pool" className="text-sm font-normal">Pool</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-fireplace" />
+                          <Label htmlFor="feature-fireplace" className="text-sm font-normal">Fireplace</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-basement" />
+                          <Label htmlFor="feature-basement" className="text-sm font-normal">Basement</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-waterfront" />
+                          <Label htmlFor="feature-waterfront" className="text-sm font-normal">Waterfront</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="feature-view" />
+                          <Label htmlFor="feature-view" className="text-sm font-normal">View</Label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Assessment Status */}
+                    <div className="space-y-2 border-t pt-4">
+                      <Label className="text-base">Assessment Status</Label>
+                      <RadioGroup defaultValue="all">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="status-all" />
+                          <Label htmlFor="status-all" className="text-sm font-normal">All Properties</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="current" id="status-current" />
+                          <Label htmlFor="status-current" className="text-sm font-normal">Current Assessment Year</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="outdated" id="status-outdated" />
+                          <Label htmlFor="status-outdated" className="text-sm font-normal">Needs Reassessment</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="appealed" id="status-appealed" />
+                          <Label htmlFor="status-appealed" className="text-sm font-normal">Appealed Assessments</Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   </div>
                   
