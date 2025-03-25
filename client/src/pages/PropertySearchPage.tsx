@@ -10,6 +10,104 @@ import {
   Filter,
   FileText
 } from 'lucide-react';
+
+// Helper functions for analytics
+const formatCurrency = (value: number): string => {
+  return `$${value.toLocaleString()}`;
+};
+
+// Generate value ranges for the bar chart
+const generateValueRanges = (properties: Property[]): { min: number; max: number; count: number }[] => {
+  // Get min and max values for scaling
+  const values = properties.map(p => p.assessedValue || 0).filter(v => v > 0);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  
+  // Create 6 buckets for the bar chart
+  const bucketSize = Math.ceil((max - min) / 6);
+  const buckets: { min: number; max: number; count: number }[] = [];
+  
+  for (let i = 0; i < 6; i++) {
+    const bucketMin = min + (i * bucketSize);
+    const bucketMax = i === 5 ? max : min + ((i + 1) * bucketSize);
+    buckets.push({
+      min: bucketMin,
+      max: bucketMax,
+      count: 0
+    });
+  }
+  
+  // Count properties in each bucket
+  properties.forEach(property => {
+    const value = property.assessedValue || 0;
+    if (value <= 0) return;
+    
+    const bucketIndex = Math.min(5, Math.floor((value - min) / bucketSize));
+    buckets[bucketIndex].count++;
+  });
+  
+  return buckets;
+};
+
+// Generate property type distribution for the pie chart
+const generatePropertyTypeDistribution = (properties: Property[]): { type: string; percentage: number }[] => {
+  const typeCounts: Record<string, number> = {};
+  
+  // Count properties by type
+  properties.forEach(property => {
+    const type = property.propertyType || 'Unknown';
+    typeCounts[type] = (typeCounts[type] || 0) + 1;
+  });
+  
+  // Convert to array with percentages
+  return Object.entries(typeCounts).map(([type, count]) => ({
+    type,
+    percentage: Math.round((count / properties.length) * 100)
+  })).sort((a, b) => b.percentage - a.percentage);
+};
+
+// Calculate average of a property field
+const calculateAverage = (properties: Property[], field: keyof Property): number => {
+  const values = properties
+    .map(p => typeof p[field] === 'number' ? (p[field] as number) : 0)
+    .filter(v => v > 0);
+  
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+
+// Calculate min value of a property field
+const calculateMinValue = (properties: Property[], field: keyof Property): number => {
+  const values = properties
+    .map(p => typeof p[field] === 'number' ? (p[field] as number) : Infinity)
+    .filter(v => v < Infinity);
+  
+  return values.length > 0 ? Math.min(...values) : 0;
+};
+
+// Calculate max value of a property field
+const calculateMaxValue = (properties: Property[], field: keyof Property): number => {
+  const values = properties
+    .map(p => typeof p[field] === 'number' ? (p[field] as number) : 0)
+    .filter(v => v > 0);
+  
+  return values.length > 0 ? Math.max(...values) : 0;
+};
+
+// Calculate median value of a property field
+const calculateMedianValue = (properties: Property[], field: keyof Property): number => {
+  const values = properties
+    .map(p => typeof p[field] === 'number' ? (p[field] as number) : 0)
+    .filter(v => v > 0)
+    .sort((a, b) => a - b);
+  
+  if (values.length === 0) return 0;
+  
+  const mid = Math.floor(values.length / 2);
+  return values.length % 2 === 0
+    ? (values[mid - 1] + values[mid]) / 2
+    : values[mid];
+};
 import { PropertySearch } from '../components/property/PropertySearch';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { AppProvider } from '../context/AppContext';
@@ -183,171 +281,313 @@ export default function PropertySearchPage() {
           </TabsContent>
           
           <TabsContent value="list" className="m-0">
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full table-auto">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Address
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => updateSearchParams({ 
-                              sortBy: 'address', 
-                              sortOrder: searchParams.sortBy === 'address' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
-                            })}
-                          >
-                            {searchParams.sortBy === 'address' ? (
-                              searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : null}
-                          </Button>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Assessed Value
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => updateSearchParams({ 
-                              sortBy: 'assessedValue', 
-                              sortOrder: searchParams.sortBy === 'assessedValue' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
-                            })}
-                          >
-                            {searchParams.sortBy === 'assessedValue' ? (
-                              searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : null}
-                          </Button>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Type
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => updateSearchParams({ 
-                              sortBy: 'propertyType', 
-                              sortOrder: searchParams.sortBy === 'propertyType' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
-                            })}
-                          >
-                            {searchParams.sortBy === 'propertyType' ? (
-                              searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : null}
-                          </Button>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Built
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => updateSearchParams({ 
-                              sortBy: 'yearBuilt', 
-                              sortOrder: searchParams.sortBy === 'yearBuilt' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
-                            })}
-                          >
-                            {searchParams.sortBy === 'yearBuilt' ? (
-                              searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : null}
-                          </Button>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Sq Ft
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => updateSearchParams({ 
-                              sortBy: 'squareFeet', 
-                              sortOrder: searchParams.sortBy === 'squareFeet' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
-                            })}
-                          >
-                            {searchParams.sortBy === 'squareFeet' ? (
-                              searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : null}
-                          </Button>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {data?.properties && data.properties.length > 0 ? (
-                        data.properties.map((property) => (
-                          <tr key={property.id} className="hover:bg-muted/50">
-                            <td className="px-4 py-3 text-sm">
-                              <div className="font-medium">{property.address}</div>
-                              <div className="text-xs text-muted-foreground">{property.city}, {property.state} {property.zipCode}</div>
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              ${property.assessedValue?.toLocaleString() || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {property.propertyType || 'Unknown'}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {property.yearBuilt || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {property.squareFeet?.toLocaleString() || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-center">
-                              <div className="flex justify-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  asChild
-                                >
-                                  <a href={`/property/${property.id}`}>
-                                    <Search className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                              </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-medium">Property Data Grid</h3>
+                  <p className="text-muted-foreground text-sm">Detailed property information in tabular format</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Advanced Filters
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Grid
+                  </Button>
+                </div>
+              </div>
+              
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-6">
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                className="rounded border-border h-4 w-4"
+                                onChange={(e) => {
+                                  if (e.target.checked && data?.properties) {
+                                    setSelectedProperties(data.properties.map(p => p.id));
+                                  } else {
+                                    setSelectedProperties([]);
+                                  }
+                                }}
+                                checked={data?.properties && data.properties.length > 0 && selectedProperties.length === data.properties.length}
+                              />
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Address
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-1"
+                                onClick={() => updateSearchParams({ 
+                                  sortBy: 'address', 
+                                  sortOrder: searchParams.sortBy === 'address' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
+                                })}
+                              >
+                                {searchParams.sortBy === 'address' ? (
+                                  searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                ) : null}
+                              </Button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Parcel ID
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Assessed Value
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-1"
+                                onClick={() => updateSearchParams({ 
+                                  sortBy: 'assessedValue', 
+                                  sortOrder: searchParams.sortBy === 'assessedValue' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
+                                })}
+                              >
+                                {searchParams.sortBy === 'assessedValue' ? (
+                                  searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                ) : null}
+                              </Button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Land Value
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Improvement Value
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Type
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-1"
+                                onClick={() => updateSearchParams({ 
+                                  sortBy: 'propertyType', 
+                                  sortOrder: searchParams.sortBy === 'propertyType' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
+                                })}
+                              >
+                                {searchParams.sortBy === 'propertyType' ? (
+                                  searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                ) : null}
+                              </Button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Built
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-1"
+                                onClick={() => updateSearchParams({ 
+                                  sortBy: 'yearBuilt', 
+                                  sortOrder: searchParams.sortBy === 'yearBuilt' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
+                                })}
+                              >
+                                {searchParams.sortBy === 'yearBuilt' ? (
+                                  searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                ) : null}
+                              </Button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Sq Ft
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-1"
+                                onClick={() => updateSearchParams({ 
+                                  sortBy: 'squareFeet', 
+                                  sortOrder: searchParams.sortBy === 'squareFeet' && searchParams.sortOrder === 'asc' ? 'desc' : 'asc' 
+                                })}
+                              >
+                                {searchParams.sortBy === 'squareFeet' ? (
+                                  searchParams.sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                ) : null}
+                              </Button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {data?.properties && data.properties.length > 0 ? (
+                          data.properties.map((property) => (
+                            <tr key={property.id} className="hover:bg-muted/50">
+                              <td className="px-4 py-3 text-sm">
+                                <input 
+                                  type="checkbox" 
+                                  className="rounded border-border h-4 w-4"
+                                  onChange={(e) => handlePropertySelect(property.id, e.target.checked)}
+                                  checked={selectedProperties.includes(property.id)}
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <div className="font-medium">{property.address}</div>
+                                <div className="text-xs text-muted-foreground">{property.city}, {property.state} {property.zipCode}</div>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {property.parcelId}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium">
+                                ${property.assessedValue?.toLocaleString() || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                ${property.landValue?.toLocaleString() || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                ${property.improvementValue?.toLocaleString() || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {property.propertyType || 'Unknown'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {property.yearBuilt || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {property.squareFeet?.toLocaleString() || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-center">
+                                <div className="flex justify-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    asChild
+                                  >
+                                    <a href={`/property/${property.id}`}>
+                                      <Search className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={10} className="px-4 py-8 text-center">
+                              <p className="text-muted-foreground">No properties found</p>
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center">
-                            <p className="text-muted-foreground">No properties found</p>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {data?.properties && data.properties.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {data.properties.length} of {data.total} properties
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={searchParams.page <= 1}
+                      onClick={() => updateSearchParams({ page: Math.max(1, searchParams.page - 1) })}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center text-sm">
+                      Page {searchParams.page} of {Math.ceil(data.total / searchParams.pageSize)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={searchParams.page >= Math.ceil(data.total / searchParams.pageSize)}
+                      onClick={() => updateSearchParams({ page: searchParams.page + 1 })}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           </TabsContent>
           
           <TabsContent value="map" className="m-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Property Map View</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[50vh] bg-muted rounded-md flex items-center justify-center">
-                  <div className="text-center">
-                    <MapIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium">Interactive Property Map</h3>
-                    <p className="text-muted-foreground mt-1">
-                      Map view will be implemented in the next phase using Leaflet or Google Maps API.
-                    </p>
-                  </div>
+            <div className="grid grid-cols-1 gap-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-medium">Interactive Property Map</h3>
+                  <p className="text-muted-foreground text-sm">Visualize property locations and assessment data geographically</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <MapIcon className="h-4 w-4 mr-2" />
+                    Toggle Heatmap
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Map Filters
+                  </Button>
+                </div>
+              </div>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="h-[60vh] bg-muted rounded-md flex items-center justify-center">
+                    <div className="max-w-md text-center p-6">
+                      <MapIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <h3 className="text-lg font-medium">Interactive Map Coming Soon</h3>
+                      <p className="text-muted-foreground mt-2 mb-6">
+                        The enhanced map view will include property clustering, heatmap visualization for property values, 
+                        and geographic filtering options.
+                      </p>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-left">
+                        <div className="bg-background rounded-md p-3 border border-border">
+                          <h4 className="font-medium text-sm">Property Clustering</h4>
+                          <p className="text-xs text-muted-foreground mt-1">Group properties by location for better visualization</p>
+                        </div>
+                        <div className="bg-background rounded-md p-3 border border-border">
+                          <h4 className="font-medium text-sm">Value Heatmap</h4>
+                          <p className="text-xs text-muted-foreground mt-1">Color-coded visualization of property values by area</p>
+                        </div>
+                        <div className="bg-background rounded-md p-3 border border-border">
+                          <h4 className="font-medium text-sm">Geographic Filtering</h4>
+                          <p className="text-xs text-muted-foreground mt-1">Filter properties by drawing areas on the map</p>
+                        </div>
+                        <div className="bg-background rounded-md p-3 border border-border">
+                          <h4 className="font-medium text-sm">Spatial Analysis</h4>
+                          <p className="text-xs text-muted-foreground mt-1">Analyze property trends by geographic location</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           
           <TabsContent value="analytics" className="m-0">
