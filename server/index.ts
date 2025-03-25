@@ -115,9 +115,9 @@ app.use((req, res, next) => {
     app.use(errorHandler);
 
     // Start the server
-    const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen({
-      port: process.env.PORT || 3000,
+      port: process.env.PORT || 5000,
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
