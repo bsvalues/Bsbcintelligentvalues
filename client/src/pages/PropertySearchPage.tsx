@@ -258,29 +258,30 @@ export default function PropertySearchPage() {
           error={error as Error}
           onRetry={refetch}
         >
-          <TabsContent value="grid" className="m-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {data?.properties && data.properties.length > 0 ? (
-                data.properties.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    property={property as any}
-                    showCompareButton
-                    showAppealButton={false}
-                  />
-                ))
-              ) : (
-                <div className="col-span-full text-center p-8">
-                  <h3 className="text-lg font-medium">No properties found</h3>
-                  <p className="text-muted-foreground mt-1">
-                    Try adjusting your search criteria or filters.
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="list" className="m-0">
+          <Tabs value={viewMode} className="mt-4">
+            <TabsContent value="grid" className="m-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {data?.properties && data.properties.length > 0 ? (
+                  data.properties.map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      property={property as any}
+                      showCompareButton
+                      showAppealButton={false}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center p-8">
+                    <h3 className="text-lg font-medium">No properties found</h3>
+                    <p className="text-muted-foreground mt-1">
+                      Try adjusting your search criteria or filters.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="list" className="m-0">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -734,6 +735,7 @@ export default function PropertySearchPage() {
               </div>
             </div>
           </TabsContent>
+          </Tabs>
         </DataLoadingState>
       </div>
     </AppProvider>
