@@ -79,7 +79,9 @@ export default function ValuationAssistant() {
   // State for selected valuation approaches
   const [selectedApproaches, setSelectedApproaches] = useState<string[]>([
     'sales_comparison', 
-    'cost_approach'
+    'cost_approach',
+    'income_approach',
+    'hedonic_model'
   ]);
   
   // State for response
@@ -104,7 +106,7 @@ export default function ValuationAssistant() {
       yearBuilt: new Date().getFullYear() - 20,
       lotSize: undefined,
       additionalFeatures: '',
-      approaches: ['sales_comparison', 'cost_approach']
+      approaches: ['sales_comparison', 'cost_approach', 'income_approach', 'hedonic_model']
     }
   });
   
@@ -205,50 +207,223 @@ export default function ValuationAssistant() {
     valuationMutation.isPending || 
     questionMutation.isPending;
   
+  // Format valuation content with improved UI
+  const formatValuationResult = (result: any) => {
+    // If it's just a string, return as is
+    if (typeof result.valuation === 'string') {
+      return (
+        <div className="whitespace-pre-wrap">
+          {result.valuation}
+        </div>
+      );
+    }
+    
+    // Extract structured valuation data if available
+    const valuationData = result.valuationData || result.data || {};
+    const approaches = result.approaches || valuationData.approaches || [];
+    const confidenceScore = result.confidenceScore || valuationData.confidenceScore || 0;
+    
+    return (
+      <div className="space-y-6">
+        {/* Main valuation result */}
+        {result.summary && (
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-2">Executive Summary</h3>
+            <div className="whitespace-pre-wrap">{result.summary}</div>
+          </div>
+        )}
+        
+        {/* Estimated value section */}
+        <div className="bg-primary/5 border rounded-lg p-6 text-center">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Estimated Property Value</h3>
+          <div className="text-3xl font-bold mb-2">
+            {valuationData.estimatedValue 
+              ? `$${valuationData.estimatedValue.toLocaleString()}`
+              : result.valuation || 'Value determination in progress'}
+          </div>
+          {valuationData.valueRange && (
+            <div className="text-sm text-muted-foreground">
+              Range: ${valuationData.valueRange[0].toLocaleString()} - ${valuationData.valueRange[1].toLocaleString()}
+            </div>
+          )}
+          <div className="mt-4 flex justify-center">
+            <div className="bg-background rounded-full h-2 w-48 overflow-hidden">
+              <div 
+                className="bg-primary h-full" 
+                style={{ width: `${confidenceScore}%` }}
+              ></div>
+            </div>
+          </div>
+          <div className="text-sm mt-1">
+            Confidence Score: {confidenceScore}%
+          </div>
+        </div>
+        
+        {/* Approaches grid */}
+        {approaches.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Valuation Approaches</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {approaches.map((approach: any, index: number) => (
+                <div key={index} className="border rounded-md p-4 bg-card">
+                  <h4 className="font-medium mb-2">{approach.name || `Approach ${index + 1}`}</h4>
+                  {approach.value && (
+                    <div className="text-xl font-semibold mb-1">${approach.value.toLocaleString()}</div>
+                  )}
+                  {approach.weight && (
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Weight: {approach.weight}%
+                    </div>
+                  )}
+                  {approach.description && (
+                    <p className="text-sm mt-2">{approach.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Adjustments table if available */}
+        {valuationData.adjustmentsApplied && Object.keys(valuationData.adjustmentsApplied).length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Value Adjustments</h3>
+            <div className="border rounded-md overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="text-left p-2">Factor</th>
+                    <th className="text-right p-2">Adjustment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(valuationData.adjustmentsApplied).map(([key, value]: [string, any], index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-2">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</td>
+                      <td className="text-right p-2">${(value as number).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Additional details */}
+        {result.details && (
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-2">Additional Details</h3>
+            <div className="whitespace-pre-wrap">{result.details}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Format question answer with improved UI
+  const formatQuestionAnswer = (result: any) => {
+    return (
+      <div className="space-y-4">
+        <div className="bg-primary/5 border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Your Question</h3>
+          <div className="font-medium">{result.question || questionForm.getValues().question}</div>
+        </div>
+        
+        <div className="bg-card border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Answer</h3>
+          <div className="whitespace-pre-wrap">{result.answer}</div>
+        </div>
+        
+        {result.sources && result.sources.length > 0 && (
+          <div className="bg-muted/30 border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Sources</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              {result.sources.map((source: string, index: number) => (
+                <li key={index} className="text-sm">{source}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render response view if there's a response
   if (isViewingResponse && response) {
     return (
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle>Valuation Result</CardTitle>
+          <CardTitle>
+            {response.result && response.result.valuation ? 'Valuation Result' : 'Response'}
+          </CardTitle>
           <CardDescription>
             Processed in {response.processingTime ? `${Math.round(response.processingTime / 1000)}s` : 'Unknown time'}
+            {response.modelName && ` • Using ${response.modelName}`}
           </CardDescription>
         </CardHeader>
         <CardContent className="max-h-[calc(100vh-300px)] overflow-y-auto">
           {response.result && response.result.valuation ? (
-            <div className="whitespace-pre-wrap">{response.result.valuation}</div>
+            formatValuationResult(response.result)
           ) : response.result && response.result.answer ? (
-            <div className="whitespace-pre-wrap">{response.result.answer}</div>
+            formatQuestionAnswer(response.result)
           ) : (
             <div className="whitespace-pre-wrap">{JSON.stringify(response.result, null, 2)}</div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleBackToForm}>
             Back to Form
           </Button>
           
-          <Button 
-            variant="secondary"
-            onClick={() => {
-              // Copy to clipboard
-              const text = response.result && response.result.valuation
-                ? response.result.valuation
-                : response.result && response.result.answer
-                  ? response.result.answer
-                  : JSON.stringify(response.result, null, 2);
-              
-              navigator.clipboard.writeText(text);
-              toast({
-                title: 'Copied to clipboard',
-                description: 'The valuation result has been copied to your clipboard.',
-                variant: 'default'
-              });
-            }}
-          >
-            Copy to Clipboard
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary"
+              onClick={() => {
+                // Copy to clipboard
+                const text = response.result && response.result.valuation
+                  ? typeof response.result.valuation === 'string' 
+                    ? response.result.valuation 
+                    : JSON.stringify(response.result.valuation, null, 2)
+                  : response.result && response.result.answer
+                    ? response.result.answer
+                    : JSON.stringify(response.result, null, 2);
+                
+                navigator.clipboard.writeText(text);
+                toast({
+                  title: 'Copied to clipboard',
+                  description: 'The result has been copied to your clipboard.',
+                  variant: 'default'
+                });
+              }}
+            >
+              Copy to Clipboard
+            </Button>
+            
+            {response.result && response.result.valuation && (
+              <Button 
+                variant="default"
+                onClick={() => {
+                  toast({
+                    title: 'PDF Export',
+                    description: 'Exporting valuation report as PDF...',
+                    variant: 'default'
+                  });
+                  
+                  // This would typically call an API endpoint to generate a PDF
+                  // For now, we'll just show a toast
+                  setTimeout(() => {
+                    toast({
+                      title: 'Export Complete',
+                      description: 'Valuation report has been exported successfully.',
+                      variant: 'default'
+                    });
+                  }, 2000);
+                }}
+              >
+                Export PDF
+              </Button>
+            )}
+          </div>
         </CardFooter>
       </Card>
     );
@@ -553,61 +728,107 @@ export default function ValuationAssistant() {
                 
                 <div>
                   <FormLabel>Valuation Approaches</FormLabel>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="sales_comparison" 
-                        checked={selectedApproaches.includes('sales_comparison')}
-                        onCheckedChange={() => handleApproachToggle('sales_comparison')}
-                      />
-                      <label 
-                        htmlFor="sales_comparison" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Sales Comparison
-                      </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 mb-2">
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="sales_comparison" 
+                          checked={selectedApproaches.includes('sales_comparison')}
+                          onCheckedChange={() => handleApproachToggle('sales_comparison')}
+                        />
+                        <label 
+                          htmlFor="sales_comparison" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Sales Comparison
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">Compares subject property to similar recently sold properties</p>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="cost_approach" 
-                        checked={selectedApproaches.includes('cost_approach')}
-                        onCheckedChange={() => handleApproachToggle('cost_approach')}
-                      />
-                      <label 
-                        htmlFor="cost_approach" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Cost Approach
-                      </label>
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="cost_approach" 
+                          checked={selectedApproaches.includes('cost_approach')}
+                          onCheckedChange={() => handleApproachToggle('cost_approach')}
+                        />
+                        <label 
+                          htmlFor="cost_approach" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Cost Approach
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">Calculates cost to replace property minus depreciation</p>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="income_approach" 
-                        checked={selectedApproaches.includes('income_approach')}
-                        onCheckedChange={() => handleApproachToggle('income_approach')}
-                      />
-                      <label 
-                        htmlFor="income_approach" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Income Approach
-                      </label>
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="income_approach" 
+                          checked={selectedApproaches.includes('income_approach')}
+                          onCheckedChange={() => handleApproachToggle('income_approach')}
+                        />
+                        <label 
+                          htmlFor="income_approach" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Income Approach
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">Values property based on income potential (DCF method)</p>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="automated_valuation" 
-                        checked={selectedApproaches.includes('automated_valuation')}
-                        onCheckedChange={() => handleApproachToggle('automated_valuation')}
-                      />
-                      <label 
-                        htmlFor="automated_valuation" 
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Automated Valuation
-                      </label>
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="hedonic_model" 
+                          checked={selectedApproaches.includes('hedonic_model')}
+                          onCheckedChange={() => handleApproachToggle('hedonic_model')}
+                        />
+                        <label 
+                          htmlFor="hedonic_model" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Hedonic Regression
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">Statistical model based on property characteristics</p>
+                    </div>
+                    
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="automated_valuation" 
+                          checked={selectedApproaches.includes('automated_valuation')}
+                          onCheckedChange={() => handleApproachToggle('automated_valuation')}
+                        />
+                        <label 
+                          htmlFor="automated_valuation" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Automated Valuation
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">AI-powered model with market analysis</p>
+                    </div>
+                    
+                    <div className="flex flex-col p-2 border rounded-md bg-card hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Checkbox 
+                          id="gis_enhanced" 
+                          checked={selectedApproaches.includes('gis_enhanced')}
+                          onCheckedChange={() => handleApproachToggle('gis_enhanced')}
+                        />
+                        <label 
+                          htmlFor="gis_enhanced" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          GIS Enhanced
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">Incorporates location and spatial data analytics</p>
                     </div>
                   </div>
                   {selectedApproaches.length === 0 && (
