@@ -546,13 +546,13 @@ export const PropertySearch: React.FC = () => {
           {data && data.properties.length > 0 && (
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
-                Showing {(searchParams.page - 1) * searchParams.pageSize + 1}-
-                {Math.min(searchParams.page * searchParams.pageSize, data.total)} of {data.total} properties
+                Showing {((searchParams.page || 1) - 1) * (searchParams.pageSize || 10) + 1}-
+                {Math.min((searchParams.page || 1) * (searchParams.pageSize || 10), data.total)} of {data.total} properties
               </div>
               
               <Pagination
                 page={searchParams.page || 1}
-                count={Math.ceil(data.total / searchParams.pageSize)}
+                count={Math.ceil(data.total / (searchParams.pageSize || 10))}
                 onPageChange={handlePageChange}
               />
             </div>

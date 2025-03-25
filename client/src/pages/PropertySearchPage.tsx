@@ -513,19 +513,19 @@ export default function PropertySearchPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={searchParams.page <= 1}
-                      onClick={() => updateSearchParams({ page: Math.max(1, searchParams.page - 1) })}
+                      disabled={(searchParams.page || 1) <= 1}
+                      onClick={() => updateSearchParams({ page: Math.max(1, (searchParams.page || 1) - 1) })}
                     >
                       Previous
                     </Button>
                     <div className="flex items-center text-sm">
-                      Page {searchParams.page} of {Math.ceil(data.total / searchParams.pageSize)}
+                      Page {searchParams.page || 1} of {Math.ceil(data.total / (searchParams.pageSize || 10))}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={searchParams.page >= Math.ceil(data.total / searchParams.pageSize)}
-                      onClick={() => updateSearchParams({ page: searchParams.page + 1 })}
+                      disabled={(searchParams.page || 1) >= Math.ceil(data.total / (searchParams.pageSize || 10))}
+                      onClick={() => updateSearchParams({ page: (searchParams.page || 1) + 1 })}
                     >
                       Next
                     </Button>
