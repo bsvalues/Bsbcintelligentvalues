@@ -1,4 +1,4 @@
-# IntelligentEstate: AI-Powered Real Estate Analytics Platform
+# BS Intelligent Values: AI-Powered Real Estate Analytics Platform
 
 A cutting-edge, full-stack AI application for real estate analytics with advanced ETL pipelines, microservices architecture, real-time geospatial analysis, machine learning predictions, and interactive visualizations.
 

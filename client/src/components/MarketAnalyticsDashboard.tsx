@@ -44,7 +44,14 @@ const MarketAnalyticsDashboard: React.FC = () => {
 
   // Get market prediction data - we'll use a mock for now
   // In a real app, we would fetch this from the API
-  const predictionData: MarketPrediction | null = null; // We'll use our mock data instead
+  const { data: predictionData, isLoading: isPredictionLoading } = useQuery({
+  queryKey: ['/api/market/predict', { area: selectedArea }],
+  queryFn: async () => {
+    const response = await fetch(`/api/market/predict?area=${selectedArea}`);
+    if (!response.ok) throw new Error('Failed to fetch predictions');
+    return response.json();
+  }
+});
 
   // Load the data when "Load Data" button is clicked
   const handleLoadData = () => {
