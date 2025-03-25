@@ -12,6 +12,7 @@ import * as massAppraisalController from "./controllers/mass-appraisal.controlle
 import * as mcpController from "./controllers/mcp.controller";
 import * as enhancedMcpController from "./controllers/enhanced-mcp.controller";
 import * as memoryManagerController from "./controllers/memory-manager.controller";
+import * as propertyTimeseriesController from "./controllers/property-timeseries.controller";
 import { asyncHandler } from "./middleware/errorHandler";
 import { performanceLogger, startMemoryMonitoring, stopMemoryMonitoring } from "./middleware/performanceLogger";
 import { alertManager, AlertSeverity } from "./services/alert";
@@ -407,6 +408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/analytics/neighborhoods/:area?", asyncHandler(analyticsController.getNeighborhoodTrends));
   app.get("/api/analytics/alerts", asyncHandler(analyticsController.getMarketAlerts));
   app.get("/api/analytics/predict/:area?", asyncHandler(analyticsController.getMarketPrediction));
+  app.get("/api/analytics/property-timeseries", asyncHandler(propertyTimeseriesController.getPropertyTimeseries));
+  app.get("/api/analytics/property-timeseries/timeframes", asyncHandler(propertyTimeseriesController.getTimeframeOptions));
+  app.get("/api/analytics/property-timeseries/market-areas", asyncHandler(propertyTimeseriesController.getMarketAreaOptions));
   app.get("/api/analytics/spatial/:area?", asyncHandler(analyticsController.getPropertySpatialRelationships));
   app.get("/api/analytics/documents/:fileName", asyncHandler(analyticsController.getPropertyDocument));
   app.post("/api/analytics/refresh", asyncHandler(analyticsController.refreshAllData));

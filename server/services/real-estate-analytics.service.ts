@@ -19,6 +19,14 @@ import { scheduler } from './scheduler.service';
 export class RealEstateAnalyticsService {
   private static instance: RealEstateAnalyticsService;
   private initialized = false;
+  
+  // Sample timeframes for property trend animation
+  private timeframes = {
+    '1yr': { duration: '1 year', interval: 'month', dataPoints: 12 },
+    '3yr': { duration: '3 years', interval: 'quarter', dataPoints: 12 },
+    '5yr': { duration: '5 years', interval: 'quarter', dataPoints: 20 },
+    '10yr': { duration: '10 years', interval: 'year', dataPoints: 10 }
+  };
 
   // Cache for expensive operations
   private cache: {
@@ -515,6 +523,290 @@ export class RealEstateAnalyticsService {
         tags: ['spatial-relationships', 'error']
       });
 
+      throw error;
+    }
+  }
+  
+  /**
+   * Get available timeframe options for property timeseries visualization
+   * @returns Array of timeframe options with labels and metadata
+   */
+  public getTimeframeOptions(): Array<{id: string; label: string; description: string}> {
+    try {
+      const options = Object.entries(this.timeframes).map(([id, config]) => ({
+        id,
+        label: config.duration,
+        description: `Shows property data over ${config.duration} in ${config.interval}ly intervals`
+      }));
+      
+      return options;
+    } catch (error) {
+      console.error("Error retrieving timeframe options:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get available market area options for property timeseries visualization
+   * @returns Array of market area options with labels and descriptions
+   */
+  public async getMarketAreaOptions(): Promise<Array<{id: string; name: string; description: string; propertyCount: number}>> {
+    try {
+      // Get connectors that have market data
+      const marketConnectors = connectorFactory.getConnectorsByType('market');
+      if (marketConnectors.length === 0) {
+        return [
+          { 
+            id: 'grandview', 
+            name: 'Grandview, WA',
+            description: 'Grandview area in Washington state',
+            propertyCount: 450
+          }
+        ];
+      }
+      
+      // Use the first connector to get market areas
+      const connector = marketConnectors[0];
+      const areas = await connector.getMarketAreas();
+      
+      // Transform to the format needed for the frontend
+      return areas.map(area => ({
+        id: area.id.toLowerCase(),
+        name: area.name,
+        description: area.description || `${area.name} real estate market area`,
+        propertyCount: area.propertyCount || 0
+      }));
+    } catch (error) {
+      console.error("Error retrieving market area options:", error);
+      
+      // Return default fallback if we can't get areas
+      return [
+        { 
+          id: 'grandview', 
+          name: 'Grandview, WA',
+          description: 'Grandview area in Washington state',
+          propertyCount: 450
+        }
+      ];
+    }
+  }
+
+  /**
+   * Get property timeseries data for animated visualization
+   * @param timeframeId The timeframe ID ('1yr', '3yr', '5yr', '10yr')
+   * @param area The market area to analyze
+   * @param propertyType The property type to filter by
+   * @returns Property timeseries data for animation
+   */
+  public async getPropertyTimeseries(
+    timeframeId: string = '1yr',
+    area: string = 'grandview',
+    propertyType: string = 'all'
+  ): Promise<any> {
+    try {
+      // Start time measurement for performance monitoring
+      const startTime = Date.now();
+      
+      // Validate timeframe
+      if (!this.timeframes[timeframeId]) {
+        throw new Error(`Invalid timeframe: ${timeframeId}`);
+      }
+      
+      const timeframe = this.timeframes[timeframeId];
+      const cacheKey = `timeseries-${timeframeId}-${area}-${propertyType}`;
+      
+      // Check cache
+      const cached = this.cache.marketSnapshots.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.cacheExpiration.marketSnapshots) {
+        return cached.data;
+      }
+      
+      // Get property listings for generating timeseries
+      const queryParams: any = { 
+        city: area,
+        limit: 1000
+      };
+      
+      if (propertyType !== 'all') {
+        queryParams.propertyType = propertyType;
+      }
+      
+      const { listings } = await this.getPropertyListings(queryParams, false, true);
+      
+      // Get market data connectors for historical data
+      const marketConnectors = connectorFactory.getConnectorsByType('market');
+      if (marketConnectors.length === 0) {
+        throw new Error('No market data connectors available');
+      }
+      
+      // Use the first connector
+      const connector = marketConnectors[0];
+      
+      // Generate date points based on timeframe
+      const endDate = new Date();
+      const startDate = new Date();
+      
+      // Calculate start date based on timeframe duration
+      if (timeframeId === '1yr') {
+        startDate.setFullYear(startDate.getFullYear() - 1);
+      } else if (timeframeId === '3yr') {
+        startDate.setFullYear(startDate.getFullYear() - 3);
+      } else if (timeframeId === '5yr') {
+        startDate.setFullYear(startDate.getFullYear() - 5);
+      } else if (timeframeId === '10yr') {
+        startDate.setFullYear(startDate.getFullYear() - 10);
+      }
+      
+      // Generate timeseries data points
+      const timeseries = [];
+      const dataPointCount = timeframe.dataPoints;
+      
+      for (let i = 0; i < dataPointCount; i++) {
+        const pointDate = new Date(startDate);
+        const progress = i / (dataPointCount - 1);
+        
+        // Calculate date for this point
+        if (timeframe.interval === 'month') {
+          const monthDiff = Math.floor(progress * 12);
+          pointDate.setMonth(startDate.getMonth() + monthDiff);
+        } else if (timeframe.interval === 'quarter') {
+          const quarterDiff = Math.floor(progress * 4);
+          pointDate.setMonth(startDate.getMonth() + (quarterDiff * 3));
+        } else if (timeframe.interval === 'year') {
+          const yearDiff = Math.floor(progress * (endDate.getFullYear() - startDate.getFullYear()));
+          pointDate.setFullYear(startDate.getFullYear() + yearDiff);
+        }
+        
+        // Format date for API query
+        const dateStr = pointDate.toISOString().split('T')[0];
+        
+        // Fetch historical property data for this date
+        const historicalData = await connector.fetchHistoricalData({
+          area,
+          propertyType: propertyType !== 'all' ? propertyType : undefined,
+          date: dateStr
+        });
+        
+        // Calculate median metrics
+        const prices = historicalData.properties.map(p => p.price).filter(p => p > 0);
+        const doms = historicalData.properties.map(p => p.daysOnMarket).filter(d => d >= 0);
+        
+        // Sort for median calculation
+        prices.sort((a, b) => a - b);
+        doms.sort((a, b) => a - b);
+        
+        const medianPrice = prices.length > 0 
+          ? prices[Math.floor(prices.length / 2)] 
+          : 0;
+          
+        const medianDOM = doms.length > 0 
+          ? doms[Math.floor(doms.length / 2)] 
+          : 0;
+        
+        // Add point to timeseries
+        timeseries.push({
+          date: dateStr,
+          properties: historicalData.properties,
+          medianPrice,
+          medianPricePerSqft: historicalData.medianPricePerSqFt,
+          medianDOM,
+          activeListings: historicalData.activeListings,
+          newListings: historicalData.newListings,
+          soldListings: historicalData.soldListings,
+          pendingListings: historicalData.pendingListings,
+          marketStats: {
+            averagePriceChange: historicalData.metrics.priceChangePct,
+            inventoryChange: historicalData.metrics.inventoryChangePct,
+            absorptionRate: historicalData.metrics.absorptionRate,
+            marketHealth: historicalData.metrics.marketHealth
+          }
+        });
+      }
+      
+      // Create result object
+      const result = {
+        timeframe: {
+          id: timeframeId,
+          label: timeframe.duration,
+          duration: timeframe.duration,
+          interval: timeframe.interval
+        },
+        timeseries,
+        marketArea: area,
+        totalProperties: listings.length,
+        dateRange: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString()
+        },
+        marketSummary: {
+          overallTrend: timeseries[timeseries.length - 1].medianPrice > timeseries[0].medianPrice ? 'increasing' : 'decreasing',
+          priceChangePct: timeseries.length > 1 ? (timeseries[timeseries.length - 1].medianPrice - timeseries[0].medianPrice) / timeseries[0].medianPrice : 0,
+          domChangePct: timeseries.length > 1 ? (timeseries[timeseries.length - 1].medianDOM - timeseries[0].medianDOM) / Math.max(1, timeseries[0].medianDOM) : 0,
+          inventoryChangePct: timeseries.length > 1 ? (timeseries[timeseries.length - 1].activeListings - timeseries[0].activeListings) / Math.max(1, timeseries[0].activeListings) : 0,
+          keyInsights: [
+            `Median price ${timeseries[timeseries.length - 1].medianPrice > timeseries[0].medianPrice ? 'increased' : 'decreased'} by ${Math.abs(Math.round((timeseries[timeseries.length - 1].medianPrice - timeseries[0].medianPrice) / timeseries[0].medianPrice * 100))}% over the ${timeframe.duration} period.`,
+            `Average days on market ${timeseries[timeseries.length - 1].medianDOM > timeseries[0].medianDOM ? 'increased' : 'decreased'} from ${timeseries[0].medianDOM} to ${timeseries[timeseries.length - 1].medianDOM} days.`,
+            `Active inventory ${timeseries[timeseries.length - 1].activeListings > timeseries[0].activeListings ? 'grew' : 'shrank'} by ${Math.abs(Math.round((timeseries[timeseries.length - 1].activeListings - timeseries[0].activeListings) / Math.max(1, timeseries[0].activeListings) * 100))}% during this period.`
+          ]
+        }
+      };
+      
+      // Cache the result
+      this.cache.marketSnapshots.set(cacheKey, {
+        timestamp: Date.now(),
+        data: result
+      });
+      
+      // Log the successful operation
+      await storage.createLog({
+        level: LogLevel.INFO,
+        category: LogCategory.SYSTEM,
+        message: `Generated property timeseries data for ${area}`,
+        details: JSON.stringify({
+          timeframeId,
+          area,
+          propertyType,
+          dataPointCount: timeseries.length,
+          totalProperties: listings.length,
+          processingTime: Date.now() - startTime
+        }),
+        source: 'real-estate-analytics',
+        projectId: null,
+        userId: null,
+        sessionId: null,
+        duration: Date.now() - startTime,
+        statusCode: null,
+        endpoint: null,
+        tags: ['property-timeseries', 'animation']
+      });
+      
+      return result;
+    } catch (error) {
+      console.error(`Error generating property timeseries data:`, error);
+      await storage.createLog({
+        level: LogLevel.ERROR,
+        category: LogCategory.SYSTEM,
+        message: `Failed to generate property timeseries data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        details: JSON.stringify({
+          timeframeId,
+          area,
+          propertyType,
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : error
+        }),
+        source: 'real-estate-analytics',
+        projectId: null,
+        userId: null,
+        sessionId: null,
+        duration: null,
+        statusCode: null,
+        endpoint: null,
+        tags: ['property-timeseries', 'animation', 'error']
+      });
+      
       throw error;
     }
   }

@@ -28,6 +28,7 @@ import MarketTrendsPage from './pages/MarketTrendsPage';
 import NaturalHazardPage from './pages/NaturalHazardPage';
 import MassAppraisalPage from './pages/MassAppraisalPage';
 import MarketHeatMapPage from './pages/MarketHeatMapPage';
+import PropertyTrendVisualizerPage from './pages/PropertyTrendVisualizerPage';
 import ValuationAssistantPage from './pages/ValuationAssistantPage';
 import AdaptiveColorSchemePage from './pages/AdaptiveColorSchemePage';
 import MCPToolPage from './pages/MCPToolPage';
@@ -94,6 +95,7 @@ const App = () => {
               <Route path="/natural-hazards" component={NaturalHazardPage} />
               <Route path="/mass-appraisal" component={MassAppraisalPage} />
               <Route path="/market-heat-map" component={MarketHeatMapPage} />
+              <Route path="/property-trend-visualizer" component={PropertyTrendVisualizerPage} />
               <Route path="/valuation-assistant" component={ValuationAssistantPage} />
               <Route path="/adaptive-color-scheme" component={AdaptiveColorSchemePage} />
               <Route path="/mcp-tool" component={MCPToolPage} />
