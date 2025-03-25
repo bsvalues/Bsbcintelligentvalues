@@ -74,6 +74,8 @@ export default function AnimatedTrendMap() {
   const [error, setError] = useState<string | null>(null);
   const [currentTimeframe, setCurrentTimeframe] = useState<string>('1yr');
   const [currentMarketArea, setCurrentMarketArea] = useState<string>('grandview');
+  const [marketAreas, setMarketAreas] = useState<Array<{id: string, name: string, description: string, propertyCount: number}>>([]);
+  const [timeframeOptions, setTimeframeOptions] = useState<Array<{id: string, label: string, description: string}>>([]);
   
   // Animation controls state
   const [animationState, setAnimationState] = useState<AnimationControlState>({
@@ -96,6 +98,26 @@ export default function AnimatedTrendMap() {
   
   // References
   const animationRef = useRef<number | null>(null);
+  
+  // Fetch market areas and timeframe options
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        // Fetch market areas
+        const marketAreasResponse = await axios.get('/api/analytics/property-timeseries/market-areas');
+        setMarketAreas(marketAreasResponse.data);
+        
+        // Fetch timeframe options
+        const timeframesResponse = await axios.get('/api/analytics/property-timeseries/timeframes');
+        setTimeframeOptions(timeframesResponse.data);
+      } catch (err) {
+        console.error('Error fetching options:', err);
+        // Don't set error state here, as it would prevent main content loading
+      }
+    };
+    
+    fetchOptions();
+  }, []);
   
   // Fetch the timeseries data from the API
   useEffect(() => {
@@ -373,15 +395,48 @@ export default function AnimatedTrendMap() {
           </div>
           
           <div className="flex gap-2">
+            <Select value={currentMarketArea} onValueChange={setCurrentMarketArea}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Market Area" />
+              </SelectTrigger>
+              <SelectContent>
+                {marketAreas.map(area => (
+                  <SelectItem key={area.id} value={area.id}>
+                    <div 
+                      className="flex items-center" 
+                      title={`${area.name} - ${area.description} (${area.propertyCount} properties)`}
+                    >
+                      {area.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             <Select value={currentTimeframe} onValueChange={setCurrentTimeframe}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Timeframe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1yr">1 Year</SelectItem>
-                <SelectItem value="3yr">3 Years</SelectItem>
-                <SelectItem value="5yr">5 Years</SelectItem>
-                <SelectItem value="10yr">10 Years</SelectItem>
+                {timeframeOptions.map(option => (
+                  <SelectItem key={option.id} value={option.id}>
+                    <div 
+                      className="flex items-center" 
+                      title={option.description}
+                    >
+                      {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+                {/* Fallback options if API doesn't provide any */}
+                {timeframeOptions.length === 0 && (
+                  <>
+                    <SelectItem value="1yr">1 Year</SelectItem>
+                    <SelectItem value="3yr">3 Years</SelectItem>
+                    <SelectItem value="5yr">5 Years</SelectItem>
+                    <SelectItem value="10yr">10 Years</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
             
