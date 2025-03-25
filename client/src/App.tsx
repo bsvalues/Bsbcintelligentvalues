@@ -57,6 +57,7 @@ const NavBar = () => {
             <NavLink href="/market-analysis" icon={<BarChart4 className="h-4 w-4" />} label="Market" />
             <NavLink href="/map" icon={<Map className="h-4 w-4" />} label="Map" />
             <NavLink href="/reports" icon={<FileText className="h-4 w-4" />} label="Reports" />
+            <NavLink href="/microservices-test" icon={<Server className="h-4 w-4" />} label="Test API" />
           </div>
           
           {/* User section */}
@@ -93,6 +94,7 @@ const NavBar = () => {
               <MobileNavLink href="/market-analysis" icon={<BarChart4 className="h-5 w-5" />} label="Market Analysis" />
               <MobileNavLink href="/map" icon={<Map className="h-5 w-5" />} label="Map View" />
               <MobileNavLink href="/reports" icon={<FileText className="h-5 w-5" />} label="Reports" />
+              <MobileNavLink href="/microservices-test" icon={<Server className="h-5 w-5" />} label="Test API" />
             </div>
           </div>
         )}
@@ -615,6 +617,7 @@ const App = () => {
                     </div>
                   </div>
                 )} />
+                <Route path="/microservices-test" component={MicroservicesTestPage} />
                 <Route component={NotFoundPage} />
               </Switch>
             </Suspense>
