@@ -16,6 +16,75 @@ import { z } from 'zod';
 // Valuation agent ID - can be set on initialization
 let valuationAgentId: string | null = null;
 
+// Task timeout configuration
+const TASK_TIMEOUTS = {
+  DEFAULT: 30000, // 30 seconds
+  VALUATION_METHODOLOGY: 60000, // 60 seconds for methodology recommendations
+  COMPREHENSIVE_VALUATION: 60000, // 60 seconds for comprehensive valuations
+  VALUATION_EXPLANATION: 45000, // 45 seconds for valuation explanations
+  VALUE_RECONCILIATION: 45000, // 45 seconds for value reconciliation
+  VALUATION_QUESTION: 45000 // 45 seconds for valuation questions
+};
+
+/**
+ * Helper function to handle agent task execution with appropriate timeout
+ * @param agent The agent to execute the task
+ * @param taskType The type of task to execute
+ * @param taskData The task data
+ * @param taskTimeoutKey The timeout key to use from TASK_TIMEOUTS
+ * @returns Object containing taskId, result, and processing time
+ */
+async function executeAgentTask(
+  agent: any, 
+  taskType: string, 
+  taskData: any, 
+  taskTimeoutKey: keyof typeof TASK_TIMEOUTS = 'DEFAULT'
+): Promise<{taskId: string, status: string, result: any, processingTime: number}> {
+  const startTime = Date.now();
+  
+  // Assign the task to the agent
+  const taskId = await agent.assignTask({
+    type: taskType,
+    priority: 'normal',
+    inputs: taskData
+  });
+  
+  // Determine timeout based on task type
+  const maxWaitTime = TASK_TIMEOUTS[taskTimeoutKey];
+  const pollInterval = 1000; // 1 second
+  let elapsedTime = 0;
+  
+  // Poll for task completion
+  while (elapsedTime < maxWaitTime) {
+    // Check task status
+    const task = await agent.getTask(taskId);
+    
+    if (!task) {
+      throw new AppError('Task not found', 500, 'task_not_found');
+    }
+    
+    if (task.status === 'completed') {
+      return {
+        taskId,
+        status: 'completed',
+        result: task.result,
+        processingTime: Date.now() - startTime
+      };
+    }
+    
+    if (task.status === 'failed') {
+      throw new AppError(`${taskType} task failed`, 500, 'task_failed', task.error);
+    }
+    
+    // Wait before checking again
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    elapsedTime += pollInterval;
+  }
+  
+  // If we reach here, the task timed out
+  throw new AppError(`${taskType} task timed out`, 500, 'task_timeout');
+}
+
 /**
  * Initialize valuation agent
  * This should be called during app startup
@@ -146,67 +215,40 @@ export async function requestComprehensiveValuation(req: Request, res: Response)
       throw new AppError('Valuation agent not found in registry', 500, 'agent_not_found');
     }
     
-    // Start the valuation task
+    // Use the helper function with extended timeout for comprehensive valuations
     const startTime = Date.now();
-    const taskId = await agent.assignTask({
-      type: 'comprehensive_valuation',
-      priority: 'normal',
-      inputs: validation.data
+    const result = await executeAgentTask(
+      agent, 
+      'comprehensive_valuation', 
+      validation.data, 
+      'COMPREHENSIVE_VALUATION'
+    );
+    
+    // Log successful completion
+    await storage.createLog({
+      message: `Comprehensive valuation completed for ${validation.data.address}`,
+      level: LogLevel.INFO,
+      category: LogCategory.AI,
+      details: JSON.stringify({
+        address: validation.data.address,
+        propertyType: validation.data.propertyType,
+        processingTime: Date.now() - startTime
+      }),
+      source: 'valuation-agent-controller',
+      userId: req.session.user?.id || null,
+      projectId: null,
+      sessionId: req.sessionID,
+      duration: Date.now() - startTime,
+      statusCode: 200,
+      endpoint: '/api/agents/valuation/comprehensive',
+      tags: ['valuation', 'comprehensive', 'success']
     });
     
-    // Wait for task completion (with timeout)
-    const maxWaitTime = 60000; // 60 seconds
-    const pollInterval = 1000; // 1 second
-    let elapsedTime = 0;
-    
-    while (elapsedTime < maxWaitTime) {
-      // Check task status
-      const task = await agent.getTask(taskId);
-      
-      if (!task) {
-        throw new AppError('Task not found', 500, 'task_not_found');
-      }
-      
-      if (task.status === 'completed') {
-        await storage.createLog({
-          message: `Comprehensive valuation completed for ${validation.data.address}`,
-          level: LogLevel.INFO,
-          category: LogCategory.AI,
-          details: JSON.stringify({
-            address: validation.data.address,
-            propertyType: validation.data.propertyType,
-            processingTime: Date.now() - startTime
-          }),
-          source: 'valuation-agent-controller',
-          userId: req.session.user?.id || null,
-          projectId: null,
-          sessionId: req.sessionID,
-          duration: Date.now() - startTime,
-          statusCode: 200,
-          endpoint: '/api/agents/valuation/comprehensive',
-          tags: ['valuation', 'comprehensive', 'success']
-        });
-        
-        // Return result
-        return res.status(200).json({
-          taskId,
-          status: 'completed',
-          result: task.result,
-          processingTime: Date.now() - startTime
-        });
-      }
-      
-      if (task.status === 'failed') {
-        throw new AppError('Valuation task failed', 500, 'task_failed', task.error);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsedTime += pollInterval;
-    }
-    
-    // If we reach here, the task timed out
-    throw new AppError('Valuation task timed out', 500, 'task_timeout');
+    // Return result
+    return res.status(200).json({
+      ...result,
+      processingTime: Date.now() - startTime
+    });
   } catch (error) {
     console.error('Error requesting comprehensive valuation:', error);
     
@@ -268,68 +310,41 @@ export async function requestMethodologyRecommendation(req: Request, res: Respon
       throw new AppError('Valuation agent not found in registry', 500, 'agent_not_found');
     }
     
-    // Start the recommendation task
+    // Use the helper function with extended timeout for methodology recommendations
     const startTime = Date.now();
-    const taskId = await agent.assignTask({
-      type: 'valuation_recommendation',
-      priority: 'normal',
-      inputs: validation.data
+    const result = await executeAgentTask(
+      agent, 
+      'valuation_recommendation', 
+      validation.data, 
+      'VALUATION_METHODOLOGY'
+    );
+    
+    // Log successful completion
+    await storage.createLog({
+      message: `Valuation methodology recommendation completed for ${validation.data.propertyType} in ${validation.data.location}`,
+      level: LogLevel.INFO,
+      category: LogCategory.AI,
+      details: JSON.stringify({
+        propertyType: validation.data.propertyType,
+        location: validation.data.location,
+        purpose: validation.data.purpose,
+        processingTime: Date.now() - startTime
+      }),
+      source: 'valuation-agent-controller',
+      userId: req.session.user?.id || null,
+      projectId: null,
+      sessionId: req.sessionID,
+      duration: Date.now() - startTime,
+      statusCode: 200,
+      endpoint: '/api/agents/valuation/methodology',
+      tags: ['valuation', 'methodology', 'recommendation', 'success']
     });
     
-    // Wait for task completion (with timeout)
-    const maxWaitTime = 30000; // 30 seconds
-    const pollInterval = 1000; // 1 second
-    let elapsedTime = 0;
-    
-    while (elapsedTime < maxWaitTime) {
-      // Check task status
-      const task = await agent.getTask(taskId);
-      
-      if (!task) {
-        throw new AppError('Task not found', 500, 'task_not_found');
-      }
-      
-      if (task.status === 'completed') {
-        await storage.createLog({
-          message: `Valuation methodology recommendation completed for ${validation.data.propertyType} in ${validation.data.location}`,
-          level: LogLevel.INFO,
-          category: LogCategory.AI,
-          details: JSON.stringify({
-            propertyType: validation.data.propertyType,
-            location: validation.data.location,
-            purpose: validation.data.purpose,
-            processingTime: Date.now() - startTime
-          }),
-          source: 'valuation-agent-controller',
-          userId: req.session.user?.id || null,
-          projectId: null,
-          sessionId: req.sessionID,
-          duration: Date.now() - startTime,
-          statusCode: 200,
-          endpoint: '/api/agents/valuation/methodology',
-          tags: ['valuation', 'methodology', 'recommendation', 'success']
-        });
-        
-        // Return result
-        return res.status(200).json({
-          taskId,
-          status: 'completed',
-          result: task.result,
-          processingTime: Date.now() - startTime
-        });
-      }
-      
-      if (task.status === 'failed') {
-        throw new AppError('Recommendation task failed', 500, 'task_failed', task.error);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsedTime += pollInterval;
-    }
-    
-    // If we reach here, the task timed out
-    throw new AppError('Recommendation task timed out', 500, 'task_timeout');
+    // Return result
+    return res.status(200).json({
+      ...result,
+      processingTime: Date.now() - startTime
+    });
   } catch (error) {
     console.error('Error requesting methodology recommendation:', error);
     
@@ -390,68 +405,41 @@ export async function requestValuationExplanation(req: Request, res: Response) {
       throw new AppError('Valuation agent not found in registry', 500, 'agent_not_found');
     }
     
-    // Start the explanation task
+    // Use the helper function with appropriate timeout for valuation explanations
     const startTime = Date.now();
-    const taskId = await agent.assignTask({
-      type: 'valuation_explanation',
-      priority: 'normal',
-      inputs: validation.data
+    const result = await executeAgentTask(
+      agent, 
+      'valuation_explanation', 
+      validation.data, 
+      'VALUATION_EXPLANATION'
+    );
+    
+    // Log successful completion
+    await storage.createLog({
+      message: `Valuation explanation completed for ${validation.data.methodology}`,
+      level: LogLevel.INFO,
+      category: LogCategory.AI,
+      details: JSON.stringify({
+        methodology: validation.data.methodology,
+        audienceLevel: validation.data.audienceLevel,
+        specificAspect: validation.data.specificAspect,
+        processingTime: Date.now() - startTime
+      }),
+      source: 'valuation-agent-controller',
+      userId: req.session.user?.id || null,
+      projectId: null,
+      sessionId: req.sessionID,
+      duration: Date.now() - startTime,
+      statusCode: 200,
+      endpoint: '/api/agents/valuation/explanation',
+      tags: ['valuation', 'explanation', 'success']
     });
     
-    // Wait for task completion (with timeout)
-    const maxWaitTime = 30000; // 30 seconds
-    const pollInterval = 1000; // 1 second
-    let elapsedTime = 0;
-    
-    while (elapsedTime < maxWaitTime) {
-      // Check task status
-      const task = await agent.getTask(taskId);
-      
-      if (!task) {
-        throw new AppError('Task not found', 500, 'task_not_found');
-      }
-      
-      if (task.status === 'completed') {
-        await storage.createLog({
-          message: `Valuation explanation completed for ${validation.data.methodology}`,
-          level: LogLevel.INFO,
-          category: LogCategory.AI,
-          details: JSON.stringify({
-            methodology: validation.data.methodology,
-            audienceLevel: validation.data.audienceLevel,
-            specificAspect: validation.data.specificAspect,
-            processingTime: Date.now() - startTime
-          }),
-          source: 'valuation-agent-controller',
-          userId: req.session.user?.id || null,
-          projectId: null,
-          sessionId: req.sessionID,
-          duration: Date.now() - startTime,
-          statusCode: 200,
-          endpoint: '/api/agents/valuation/explanation',
-          tags: ['valuation', 'explanation', 'success']
-        });
-        
-        // Return result
-        return res.status(200).json({
-          taskId,
-          status: 'completed',
-          result: task.result,
-          processingTime: Date.now() - startTime
-        });
-      }
-      
-      if (task.status === 'failed') {
-        throw new AppError('Explanation task failed', 500, 'task_failed', task.error);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsedTime += pollInterval;
-    }
-    
-    // If we reach here, the task timed out
-    throw new AppError('Explanation task timed out', 500, 'task_timeout');
+    // Return result
+    return res.status(200).json({
+      ...result,
+      processingTime: Date.now() - startTime
+    });
   } catch (error) {
     console.error('Error requesting valuation explanation:', error);
     
@@ -520,68 +508,41 @@ export async function requestValueReconciliation(req: Request, res: Response) {
       throw new AppError('Valuation agent not found in registry', 500, 'agent_not_found');
     }
     
-    // Start the reconciliation task
+    // Use the helper function with appropriate timeout for value reconciliation
     const startTime = Date.now();
-    const taskId = await agent.assignTask({
-      type: 'value_reconciliation',
-      priority: 'normal',
-      inputs: validation.data
+    const result = await executeAgentTask(
+      agent, 
+      'value_reconciliation', 
+      validation.data, 
+      'VALUE_RECONCILIATION'
+    );
+    
+    // Log successful completion
+    await storage.createLog({
+      message: `Value reconciliation completed for ${validation.data.address}`,
+      level: LogLevel.INFO,
+      category: LogCategory.AI,
+      details: JSON.stringify({
+        address: validation.data.address,
+        propertyType: validation.data.propertyType,
+        approachesUsed: validation.data.valueIndications.map(vi => vi.approach),
+        processingTime: Date.now() - startTime
+      }),
+      source: 'valuation-agent-controller',
+      userId: req.session.user?.id || null,
+      projectId: null,
+      sessionId: req.sessionID,
+      duration: Date.now() - startTime,
+      statusCode: 200,
+      endpoint: '/api/agents/valuation/reconciliation',
+      tags: ['valuation', 'reconciliation', 'success']
     });
     
-    // Wait for task completion (with timeout)
-    const maxWaitTime = 30000; // 30 seconds
-    const pollInterval = 1000; // 1 second
-    let elapsedTime = 0;
-    
-    while (elapsedTime < maxWaitTime) {
-      // Check task status
-      const task = await agent.getTask(taskId);
-      
-      if (!task) {
-        throw new AppError('Task not found', 500, 'task_not_found');
-      }
-      
-      if (task.status === 'completed') {
-        await storage.createLog({
-          message: `Value reconciliation completed for ${validation.data.address}`,
-          level: LogLevel.INFO,
-          category: LogCategory.AI,
-          details: JSON.stringify({
-            address: validation.data.address,
-            propertyType: validation.data.propertyType,
-            approachesUsed: validation.data.valueIndications.map(vi => vi.approach),
-            processingTime: Date.now() - startTime
-          }),
-          source: 'valuation-agent-controller',
-          userId: req.session.user?.id || null,
-          projectId: null,
-          sessionId: req.sessionID,
-          duration: Date.now() - startTime,
-          statusCode: 200,
-          endpoint: '/api/agents/valuation/reconciliation',
-          tags: ['valuation', 'reconciliation', 'success']
-        });
-        
-        // Return result
-        return res.status(200).json({
-          taskId,
-          status: 'completed',
-          result: task.result,
-          processingTime: Date.now() - startTime
-        });
-      }
-      
-      if (task.status === 'failed') {
-        throw new AppError('Reconciliation task failed', 500, 'task_failed', task.error);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsedTime += pollInterval;
-    }
-    
-    // If we reach here, the task timed out
-    throw new AppError('Reconciliation task timed out', 500, 'task_timeout');
+    // Return result
+    return res.status(200).json({
+      ...result,
+      processingTime: Date.now() - startTime
+    });
   } catch (error) {
     console.error('Error requesting value reconciliation:', error);
     
@@ -643,68 +604,41 @@ export async function askValuationQuestion(req: Request, res: Response) {
       throw new AppError('Valuation agent not found in registry', 500, 'agent_not_found');
     }
     
-    // Start the question task
+    // Use the helper function with appropriate timeout for valuation questions
     const startTime = Date.now();
-    const taskId = await agent.assignTask({
-      type: 'answer_valuation_question',
-      priority: 'normal',
-      inputs: validation.data
+    const result = await executeAgentTask(
+      agent, 
+      'answer_valuation_question', 
+      validation.data, 
+      'VALUATION_QUESTION'
+    );
+    
+    // Log successful completion
+    await storage.createLog({
+      message: `Valuation question answered: ${validation.data.question.substring(0, 50)}...`,
+      level: LogLevel.INFO,
+      category: LogCategory.AI,
+      details: JSON.stringify({
+        questionLength: validation.data.question.length,
+        propertyType: validation.data.propertyType,
+        location: validation.data.location,
+        processingTime: Date.now() - startTime
+      }),
+      source: 'valuation-agent-controller',
+      userId: req.session.user?.id || null,
+      projectId: null,
+      sessionId: req.sessionID,
+      duration: Date.now() - startTime,
+      statusCode: 200,
+      endpoint: '/api/agents/valuation/question',
+      tags: ['valuation', 'question', 'success']
     });
     
-    // Wait for task completion (with timeout)
-    const maxWaitTime = 30000; // 30 seconds
-    const pollInterval = 1000; // 1 second
-    let elapsedTime = 0;
-    
-    while (elapsedTime < maxWaitTime) {
-      // Check task status
-      const task = await agent.getTask(taskId);
-      
-      if (!task) {
-        throw new AppError('Task not found', 500, 'task_not_found');
-      }
-      
-      if (task.status === 'completed') {
-        await storage.createLog({
-          message: `Valuation question answered: ${validation.data.question.substring(0, 50)}...`,
-          level: LogLevel.INFO,
-          category: LogCategory.AI,
-          details: JSON.stringify({
-            questionLength: validation.data.question.length,
-            propertyType: validation.data.propertyType,
-            location: validation.data.location,
-            processingTime: Date.now() - startTime
-          }),
-          source: 'valuation-agent-controller',
-          userId: req.session.user?.id || null,
-          projectId: null,
-          sessionId: req.sessionID,
-          duration: Date.now() - startTime,
-          statusCode: 200,
-          endpoint: '/api/agents/valuation/question',
-          tags: ['valuation', 'question', 'success']
-        });
-        
-        // Return result
-        return res.status(200).json({
-          taskId,
-          status: 'completed',
-          result: task.result,
-          processingTime: Date.now() - startTime
-        });
-      }
-      
-      if (task.status === 'failed') {
-        throw new AppError('Question task failed', 500, 'task_failed', task.error);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsedTime += pollInterval;
-    }
-    
-    // If we reach here, the task timed out
-    throw new AppError('Question task timed out', 500, 'task_timeout');
+    // Return result
+    return res.status(200).json({
+      ...result,
+      processingTime: Date.now() - startTime
+    });
   } catch (error) {
     console.error('Error asking valuation question:', error);
     
