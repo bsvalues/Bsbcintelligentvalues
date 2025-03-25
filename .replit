@@ -31,7 +31,7 @@ localPort = 8004
 externalPort = 3003
 
 [workflows]
-runButton = "Project"
+runButton = "Start Full Stack"
 
 [[workflows.workflow]]
 name = "Project"
@@ -56,3 +56,16 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Full Stack"
+author = 37274620
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python microservices/launch.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
