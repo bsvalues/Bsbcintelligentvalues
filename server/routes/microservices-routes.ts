@@ -218,7 +218,10 @@ router.get('/properties/:id', async (req, res) => {
     res.json(property);
   } catch (error) {
     console.error('Error getting property:', error);
-    res.status(500).json({ error: 'Error getting property', message: error.message });
+    res.status(500).json({ 
+      error: 'Error getting property', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -232,7 +235,10 @@ router.get('/properties/:id/valuations', async (req, res) => {
     res.json(valuations);
   } catch (error) {
     console.error('Error getting property valuations:', error);
-    res.status(500).json({ error: 'Error getting property valuations', message: error.message });
+    res.status(500).json({ 
+      error: 'Error getting property valuations', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -246,7 +252,10 @@ router.post('/geocode', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error geocoding address:', error);
-    res.status(500).json({ error: 'Error geocoding address', message: error.message });
+    res.status(500).json({ 
+      error: 'Error geocoding address', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -260,7 +269,10 @@ router.post('/predict-property-value', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error predicting property value:', error);
-    res.status(500).json({ error: 'Error predicting property value', message: error.message });
+    res.status(500).json({ 
+      error: 'Error predicting property value', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -274,7 +286,10 @@ router.get('/market/:county/metrics', async (req, res) => {
     res.json(metrics);
   } catch (error) {
     console.error('Error getting market metrics:', error);
-    res.status(500).json({ error: 'Error getting market metrics', message: error.message });
+    res.status(500).json({ 
+      error: 'Error getting market metrics', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -288,7 +303,10 @@ router.post('/predict-market-trend', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error predicting market trend:', error);
-    res.status(500).json({ error: 'Error predicting market trend', message: error.message });
+    res.status(500).json({ 
+      error: 'Error predicting market trend', 
+      message: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 

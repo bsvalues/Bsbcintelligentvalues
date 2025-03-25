@@ -116,10 +116,36 @@ class PropertyServiceClient extends BaseService implements PropertyService {
   }
 
   async getProperties(params?: any): Promise<any[]> {
+    // Enhanced property search processing
+    const enhancedParams = { ...params };
+    
+    // Handle special search parameters
+    if (enhancedParams.addressWildcard) {
+      // If we have an addressWildcard, pass it to the internal service as a wildcard pattern
+      enhancedParams.addressPattern = enhancedParams.addressWildcard;
+      console.log('Using address wildcard pattern:', enhancedParams.addressPattern);
+    }
+    
+    // Process fuzzy match flag
+    if (enhancedParams.fuzzyMatch) {
+      enhancedParams.fuzzySearch = true;
+      enhancedParams.fuzzyThreshold = 0.7; // Configure fuzzy matching threshold
+      console.log('Enabling fuzzy matching with threshold:', enhancedParams.fuzzyThreshold);
+    }
+    
+    // Process normalized parcel number
+    if (enhancedParams.parcelNumber) {
+      // Ensure consistent format for parcel numbers
+      enhancedParams.normalizedParcelNumber = enhancedParams.parcelNumber.replace(/[^a-zA-Z0-9]/g, '');
+      console.log('Normalized parcel number:', enhancedParams.normalizedParcelNumber);
+    }
+    
+    console.log('Enhanced property search params:', enhancedParams);
+    
     return this.request<any[]>({
       method: 'GET',
       url: '/properties',
-      params
+      params: enhancedParams
     });
   }
 
