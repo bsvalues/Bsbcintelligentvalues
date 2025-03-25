@@ -11,6 +11,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/lib/queryClient';
 import { ComparisonProvider } from './context/ComparisonContext';
+import { startPeriodicOptimization } from './lib/memoryOptimizer';
 import RealEstateAnalyticsPage from './pages/RealEstateAnalyticsPage';
 import PropertyValuationPage from './pages/PropertyValuationPage';
 import NeighborhoodSentimentPage from './pages/NeighborhoodSentimentPage';
@@ -65,6 +66,33 @@ const App = () => {
       
       return () => clearTimeout(timer);
     }
+  }, []);
+  
+  // Start memory optimization monitoring
+  useEffect(() => {
+    console.log('Starting memory optimization monitoring...');
+    // Check every 3 minutes (180,000 ms)
+    const cleanup = startPeriodicOptimization(180000, {
+      // Optimize when memory usage exceeds 80%
+      thresholdPercent: 80,
+      // Use enhanced optimization if memory is critically high (>90%)
+      useEnhanced: true,
+      // Log results when optimization completes
+      onComplete: (result) => {
+        console.log('Memory optimization completed:', result);
+        if (result.optimization?.improvements) {
+          console.log(
+            `Memory reduced by ${result.optimization.improvements.percentReduction} (${result.optimization.improvements.heapReduction})`
+          );
+        }
+      }
+    });
+    
+    // Clean up on component unmount
+    return () => {
+      console.log('Stopping memory optimization monitoring');
+      cleanup();
+    };
   }, []);
   
   const handleCloseWelcome = () => {
