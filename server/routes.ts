@@ -32,17 +32,40 @@ import { openApiSpec } from './openapi';
 
 let memoryMonitorTimer: NodeJS.Timeout | null = null;
 
-// Schedule log cleanup to run every day
+// Schedule log cleanup to run regularly
 async function scheduledLogCleanup() {
   try {
-    // Get date 7 days ago
+    // Get current memory usage
+    const memoryUsage = process.memoryUsage();
+    const usedHeapSizeMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+    const totalHeapSizeMB = Math.round(memoryUsage.heapTotal / 1024 / 1024);
+    const percentUsed = Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100);
+    
+    // Normal maintenance: Get date 7 days ago
     const olderThan = new Date();
     olderThan.setDate(olderThan.getDate() - 7);
     
-    // Delete logs older than 7 days
-    const count = await storage.clearLogs({ olderThan });
-    
-    console.log(`[Scheduled cleanup] Deleted ${count} logs older than ${olderThan.toISOString()}`);
+    // More aggressive cleanup if memory usage is high
+    if (percentUsed > 85) {
+      console.log(`[MemoryManager] High memory usage detected: ${usedHeapSizeMB}MB / ${totalHeapSizeMB}MB (${percentUsed}%)`);
+      // For high memory usage, clear more logs (older than 1 day)
+      const recentDate = new Date();
+      recentDate.setDate(recentDate.getDate() - 1);
+      
+      // Clear debug and info logs if memory is very high
+      if (percentUsed > 90) {
+        console.log('[MemoryManager] Critical memory pressure - clearing debug logs');
+        await storage.clearLogs({ level: 'debug' });
+      }
+      
+      // Delete logs older than 1 day
+      const count = await storage.clearLogs({ olderThan: recentDate });
+      console.log(`[MemoryManager] Cleared ${count} logs older than 24 hours due to high memory usage`);
+    } else {
+      // Normal cleanup - Delete logs older than 7 days
+      const count = await storage.clearLogs({ olderThan });
+      console.log(`[Scheduled cleanup] Deleted ${count} logs older than ${olderThan.toISOString()}`);
+    }
   } catch (error) {
     console.error('Failed to perform scheduled log cleanup:', error);
   }
@@ -58,8 +81,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start memory monitoring - check every 5 minutes to reduce overhead
   memoryMonitorTimer = startMemoryMonitoring(300000);
   
-  // Schedule log cleanup to run once a day (24 hours = 86400000 ms)
+  // Run more frequent log cleanup for better memory management
+  // Main daily cleanup (24 hours = 86400000 ms)
   setInterval(scheduledLogCleanup, 86400000);
+  
+  // More frequent memory check every hour (3600000 ms)
+  setInterval(async () => {
+    // Get current memory usage
+    const memoryUsage = process.memoryUsage();
+    const percentUsed = Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100);
+    
+    // Only run cleanup if memory usage is high
+    if (percentUsed > 80) {
+      console.log(`[MemoryManager] Hourly check - memory usage at ${percentUsed}%`);
+      await scheduledLogCleanup();
+    }
+  }, 3600000);
   
   // Run initial log cleanup
   await scheduledLogCleanup();

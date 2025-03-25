@@ -766,32 +766,54 @@ export class MemStorage implements IStorage {
     level?: LogLevel;
     category?: LogCategory;
   }): Promise<number> {
-    const logs = Array.from(this.logsData.entries());
+    // Memory-optimized approach - process in chunks to reduce memory pressure
+    const CHUNK_SIZE = 50; // Process logs in chunks of 50
+    const logIds = Array.from(this.logsData.keys());
     let deletedCount = 0;
     
-    for (const [id, log] of logs) {
-      let shouldDelete = true;
+    // If no options, clear all logs for maximum memory recovery
+    if (!options) {
+      const count = this.logsData.size;
+      this.logsData.clear();
+      return count;
+    }
+    
+    // Process in chunks to reduce memory pressure
+    for (let i = 0; i < logIds.length; i += CHUNK_SIZE) {
+      const chunk = logIds.slice(i, i + CHUNK_SIZE);
       
-      if (options) {
+      for (const id of chunk) {
+        const log = this.logsData.get(id);
+        if (!log) continue;
+        
+        // Default to true, set to false if any condition isn't met
+        let shouldDelete = true;
+        
         // Keep if not older than the specified date
         if (options.olderThan && new Date(log.timestamp) > options.olderThan) {
           shouldDelete = false;
         }
         
         // Keep if not of the specified level
-        if (options.level && log.level !== options.level) {
+        if (shouldDelete && options.level && log.level !== options.level) {
           shouldDelete = false;
         }
         
         // Keep if not of the specified category
-        if (options.category && log.category !== options.category) {
+        if (shouldDelete && options.category && log.category !== options.category) {
           shouldDelete = false;
+        }
+        
+        if (shouldDelete) {
+          this.logsData.delete(id);
+          deletedCount++;
         }
       }
       
-      if (shouldDelete) {
-        this.logsData.delete(id);
-        deletedCount++;
+      // Allow some time for garbage collection between chunks
+      // This is a simple approach, in production we would use a more sophisticated technique
+      if (i + CHUNK_SIZE < logIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
     
