@@ -1,67 +1,98 @@
-/**
- * QueryClient Configuration
- * 
- * Centralized configuration for React Query
- */
 import { QueryClient } from '@tanstack/react-query';
+import { toast } from '../components/ui/use-toast';
 
-/**
- * Custom fetch function for API requests
- * Handles standard error responses and JSON parsing
- */
-export async function apiRequest<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const response = await fetch(endpoint, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    ...options,
-  });
+// Define the base API URL
+const API_BASE_URL = '';
 
-  // Handle non-200 responses
-  if (!response.ok) {
-    // Try to parse error message from response
-    try {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `API Error: ${response.status}`);
-    } catch (e) {
-      // If can't parse JSON, use status text
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-  }
-
-  // For 204 No Content responses, return empty object
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  return response.json();
+// Interface for apiRequest options
+interface ApiRequestOptions extends RequestInit {
+  data?: any;
 }
 
-/**
- * Default query function for React Query
- * Uses our apiRequest function to fetch data
- */
-async function defaultQueryFn<T>({ queryKey }: { queryKey: string[] }): Promise<T> {
-  // Use the first element of the query key as the endpoint
-  const endpoint = queryKey[0];
-  return apiRequest<T>(endpoint);
-}
-
-/**
- * QueryClient instance with default configuration
- */
+// Create a new QueryClient instance with default settings
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: defaultQueryFn,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
     },
   },
 });
 
-export default queryClient;
+// Generic API request function for making fetch requests
+export async function apiRequest<T>(
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  try {
+    const { data, ...fetchOptions } = options;
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    // Set up default headers
+    const headers = new Headers(fetchOptions.headers);
+    
+    // If not already set and we have data, set the content type
+    if (data && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+    
+    // Create the fetch request
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+      body: data ? JSON.stringify(data) : fetchOptions.body,
+    });
+    
+    // Handle non-200 responses
+    if (!response.ok) {
+      // Try to get error details from response
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        // Ignore JSON parsing errors in the error response
+      }
+      
+      // Create and throw an error
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      throw error;
+    }
+    
+    // For 204 No Content, return null
+    if (response.status === 204) {
+      return null as unknown as T;
+    }
+    
+    // Parse the JSON response
+    return await response.json();
+  } catch (error) {
+    // Display a toast notification for the error
+    toast({
+      title: 'Error',
+      description: error instanceof Error ? error.message : 'An unknown error occurred',
+      variant: 'destructive',
+    });
+    
+    // Re-throw the error for the caller to handle
+    throw error;
+  }
+}
+
+// Set up the default queryFn that can be used by the useQuery hook
+queryClient.setDefaultOptions({
+  queries: {
+    queryFn: async ({ queryKey }) => {
+      // The first element of the query key should be the endpoint
+      const endpoint = Array.isArray(queryKey) ? queryKey[0] : queryKey;
+      
+      if (typeof endpoint !== 'string') {
+        throw new Error('Invalid query key: endpoint must be a string');
+      }
+      
+      return apiRequest(endpoint);
+    },
+  },
+});
