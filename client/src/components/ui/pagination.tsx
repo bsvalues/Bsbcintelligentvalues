@@ -1,117 +1,139 @@
-import * as React from "react"
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
+/**
+ * Pagination Component
+ * 
+ * A component for navigating between pages of results
+ */
+import { Button } from './button';
+import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
-import { cn } from "@/lib/utils"
-import { ButtonProps, buttonVariants } from "@/components/ui/button"
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  showEdges?: boolean;
+  showControls?: boolean;
+  visiblePageCount?: number;
+}
 
-const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
-  <nav
-    role="navigation"
-    aria-label="pagination"
-    className={cn("mx-auto flex w-full justify-center", className)}
-    {...props}
-  />
-)
-Pagination.displayName = "Pagination"
-
-const PaginationContent = React.forwardRef<
-  HTMLUListElement,
-  React.ComponentProps<"ul">
->(({ className, ...props }, ref) => (
-  <ul
-    ref={ref}
-    className={cn("flex flex-row items-center gap-1", className)}
-    {...props}
-  />
-))
-PaginationContent.displayName = "PaginationContent"
-
-const PaginationItem = React.forwardRef<
-  HTMLLIElement,
-  React.ComponentProps<"li">
->(({ className, ...props }, ref) => (
-  <li ref={ref} className={cn("", className)} {...props} />
-))
-PaginationItem.displayName = "PaginationItem"
-
-type PaginationLinkProps = {
-  isActive?: boolean
-} & Pick<ButtonProps, "size"> &
-  React.ComponentProps<"a">
-
-const PaginationLink = ({
-  className,
-  isActive,
-  size = "icon",
-  ...props
-}: PaginationLinkProps) => (
-  <a
-    aria-current={isActive ? "page" : undefined}
-    className={cn(
-      buttonVariants({
-        variant: isActive ? "outline" : "ghost",
-        size,
-      }),
-      className
-    )}
-    {...props}
-  />
-)
-PaginationLink.displayName = "PaginationLink"
-
-const PaginationPrevious = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to previous page"
-    size="default"
-    className={cn("gap-1 pl-2.5", className)}
-    {...props}
-  >
-    <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
-  </PaginationLink>
-)
-PaginationPrevious.displayName = "PaginationPrevious"
-
-const PaginationNext = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to next page"
-    size="default"
-    className={cn("gap-1 pr-2.5", className)}
-    {...props}
-  >
-    <span>Next</span>
-    <ChevronRight className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationNext.displayName = "PaginationNext"
-
-const PaginationEllipsis = ({
-  className,
-  ...props
-}: React.ComponentProps<"span">) => (
-  <span
-    aria-hidden
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
-    {...props}
-  >
-    <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
-  </span>
-)
-PaginationEllipsis.displayName = "PaginationEllipsis"
-
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  showEdges = true,
+  showControls = true,
+  visiblePageCount = 5,
+}: PaginationProps) {
+  // Generate array of page numbers to display
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    // If totalPages is 7 or less, show all pages
+    if (totalPages <= visiblePageCount + 2) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    const pages: (number | 'ellipsis')[] = [];
+    
+    // Always show first page
+    if (showEdges) {
+      pages.push(1);
+    }
+    
+    // Calculate start and end of visible pages
+    const sidePages = Math.floor(visiblePageCount / 2);
+    let startPage = Math.max(showEdges ? 2 : 1, currentPage - sidePages);
+    let endPage = Math.min(showEdges ? totalPages - 1 : totalPages, startPage + visiblePageCount - 1);
+    
+    // Adjust if we're near the end
+    if (endPage - startPage < visiblePageCount - 1) {
+      startPage = Math.max(showEdges ? 2 : 1, endPage - visiblePageCount + 1);
+    }
+    
+    // Add leading ellipsis if needed
+    if (showEdges && startPage > 2) {
+      pages.push('ellipsis');
+    }
+    
+    // Add visible pages
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    // Add trailing ellipsis if needed
+    if (showEdges && endPage < totalPages - 1) {
+      pages.push('ellipsis');
+    }
+    
+    // Always show last page
+    if (showEdges) {
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    // Don't do anything if clicking current page
+    if (page === currentPage) return;
+    
+    // Don't go beyond limits
+    if (page < 1 || page > totalPages) return;
+    
+    // Call the provided callback
+    onPageChange(page);
+  };
+  
+  const pageNumbers = getPageNumbers();
+  
+  return (
+    <div className="flex items-center justify-center gap-1">
+      {/* Previous button */}
+      {showControls && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+      )}
+      
+      {/* Page numbers */}
+      {pageNumbers.map((page, index) => 
+        page === 'ellipsis' ? (
+          <div 
+            key={`ellipsis-${index}`} 
+            className="flex items-center justify-center w-9 h-9"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </div>
+        ) : (
+          <Button
+            key={page}
+            variant={currentPage === page ? 'default' : 'outline'}
+            size="icon"
+            onClick={() => handlePageChange(page)}
+            aria-label={`Page ${page}`}
+            aria-current={currentPage === page ? 'page' : undefined}
+          >
+            {page}
+          </Button>
+        )
+      )}
+      
+      {/* Next button */}
+      {showControls && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label="Next page"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
 }
