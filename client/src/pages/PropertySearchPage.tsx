@@ -116,7 +116,7 @@ export default function PropertySearchPage() {
     page: 1,
     pageSize: 12,
     sortBy: 'address',
-    sortOrder: 'asc',
+    sortOrder: 'asc' as 'asc' | 'desc',
     county: 'Yakima'
   });
   
@@ -125,6 +125,18 @@ export default function PropertySearchPage() {
   const [selectedProperties, setSelectedProperties] = useState<number[]>([]);
   
   const updateSearchParams = (newParams: Record<string, any>) => {
+    // Ensure sortOrder is properly typed when it's part of the newParams
+    if ('sortOrder' in newParams) {
+      // Make sure sortOrder is either 'asc' or 'desc'
+      const sortOrder = String(newParams.sortOrder).toLowerCase();
+      if (sortOrder === 'asc' || sortOrder === 'desc') {
+        newParams.sortOrder = sortOrder as 'asc' | 'desc';
+      } else {
+        // Default to 'asc' if invalid
+        newParams.sortOrder = 'asc' as 'asc' | 'desc';
+      }
+    }
+    
     setSearchParams({ ...searchParams, ...newParams });
   };
   
