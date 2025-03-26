@@ -109,8 +109,7 @@ import {
   TabsList, 
   TabsTrigger 
 } from '../components/ui/tabs';
-import { usePropertyData } from '../hooks/usePropertyData';
-import { Property } from '../types/property';
+import { usePropertyData, Property } from '../hooks/usePropertyData';
 
 export default function PropertySearchPage() {
   const [searchParams, setSearchParams] = useSearchParams({
