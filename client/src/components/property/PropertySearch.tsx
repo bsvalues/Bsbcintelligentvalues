@@ -52,7 +52,7 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
-    propertyType: '',
+    propertyType: 'any',
     minValue: 0,
     maxValue: 2000000,
     minSquareFeet: 0,
@@ -247,7 +247,7 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
   
   const resetFilters = () => {
     setAdvancedFilters({
-      propertyType: '',
+      propertyType: 'any',
       minValue: 0,
       maxValue: 2000000,
       minSquareFeet: 0,
@@ -366,7 +366,7 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
                           <SelectValue placeholder="Select property type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any</SelectItem>
+                          <SelectItem value="any">Any</SelectItem>
                           {propertyTypes.map((type) => (
                             <SelectItem key={type} value={type}>{type}</SelectItem>
                           ))}
