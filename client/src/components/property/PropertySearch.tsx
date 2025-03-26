@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   FileDown, 
   Filter, 
   MapPin, 
   Home, 
+  Mail,
+  FileText,
   SlidersHorizontal 
 } from 'lucide-react';
 import { usePropertySearch, PropertySearchParams, Property } from '../../hooks/usePropertyData';
@@ -67,6 +69,89 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
   // Fetch properties based on search params
   const { data, isLoading, isError, error, refetch } = usePropertySearch(searchParams);
   
+  // Search types for visual indicators
+  const SearchType = {
+    NONE: 'none',
+    ADDRESS: 'address',
+    PARCEL_NUMBER: 'parcel',
+    HOUSE_NUMBER: 'house',
+    STREET_NAME: 'street',
+    ZIP_CODE: 'zip',
+    GENERAL: 'general'
+  };
+  
+  // State for detected search type (for UI indicators)
+  const [detectedSearchType, setDetectedSearchType] = useState(SearchType.NONE);
+  
+  // Get description of search type for tooltip
+  const getSearchTypeDescription = (type: string) => {
+    switch (type) {
+      case SearchType.PARCEL_NUMBER:
+        return 'Searching by Parcel Number';
+      case SearchType.HOUSE_NUMBER:
+        return 'Searching by House Number';
+      case SearchType.STREET_NAME:
+        return 'Searching by Street Name';
+      case SearchType.ZIP_CODE:
+        return 'Searching by ZIP Code';
+      case SearchType.ADDRESS:
+        return 'Searching by Address';
+      case SearchType.GENERAL:
+        return 'General Text Search';
+      default:
+        return '';
+    }
+  };
+
+  // Get icon for search type
+  const getSearchTypeIcon = (type: string) => {
+    switch (type) {
+      case SearchType.PARCEL_NUMBER:
+        return <FileText className="h-4 w-4" />;
+      case SearchType.HOUSE_NUMBER:
+        return <Home className="h-4 w-4" />;
+      case SearchType.STREET_NAME:
+        return <MapPin className="h-4 w-4" />;
+      case SearchType.ZIP_CODE:
+        return <Mail className="h-4 w-4" />;
+      case SearchType.ADDRESS:
+        return <MapPin className="h-4 w-4" />;
+      case SearchType.GENERAL:
+        return <Search className="h-4 w-4" />;
+      default:
+        return <Search className="h-4 w-4" />;
+    }
+  };
+
+  // Detect search type as user types
+  useEffect(() => {
+    if (!searchText) {
+      setDetectedSearchType(SearchType.NONE);
+      return;
+    }
+    
+    // Check for parcel number format (000-000-000 or similar)
+    if (searchText.match(/^[0-9]{3,}[-\s]?[0-9]{3,}([-\s]?[0-9]{3,})?$/)) {
+      setDetectedSearchType(SearchType.PARCEL_NUMBER);
+    } 
+    // Check if it's just a number (e.g., house number)
+    else if (/^\d+$/.test(searchText)) {
+      setDetectedSearchType(SearchType.HOUSE_NUMBER);
+    }
+    // Check if it contains street suffix indicators
+    else if (/\b(st|ave|rd|blvd|dr|ln|way|pl|ct)\b/i.test(searchText)) {
+      setDetectedSearchType(SearchType.STREET_NAME);
+    }
+    // Check if it's a zip code
+    else if (/^\d{5}(-\d{4})?$/.test(searchText)) {
+      setDetectedSearchType(SearchType.ZIP_CODE);
+    }
+    // Default case - general search term
+    else {
+      setDetectedSearchType(SearchType.GENERAL);
+    }
+  }, [searchText]);
+  
   // Apply filters and search with intelligent parsing
   const applySearchAndFilters = () => {
     const newParams: PropertySearchParams = {
@@ -78,36 +163,43 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
     
     // Handle intelligent address search
     if (searchText) {
-      // Advanced pattern recognition
-      // Check for parcel number format (000-000-000 or similar)
-      if (searchText.match(/^[0-9]{3,}[-\s]?[0-9]{3,}([-\s]?[0-9]{3,})?$/)) {
-        // Looks like a parcel number format - normalize by removing spaces
-        newParams.parcelNumber = searchText.replace(/\s+/g, '');
-        newParams.address = undefined;
-      } 
-      // Check if it's just a number (e.g., house number)
-      else if (/^\d+$/.test(searchText)) {
-        // It's just a number - search in both address and parcel with wildcards
-        newParams.address = searchText; // Will match house numbers
-        // Don't set parcelNumber to allow for flexible search
-      }
-      // Check if it contains street suffix indicators
-      else if (/\b(st|ave|rd|blvd|dr|ln|way|pl|ct)\b/i.test(searchText)) {
-        // Looks like a street name with suffix
-        newParams.address = searchText;
-        newParams.parcelNumber = undefined;
-      }
-      // Check if it's a zip code
-      else if (/^\d{5}(-\d{4})?$/.test(searchText)) {
-        newParams.zipCode = searchText;
-        newParams.address = undefined;
-        newParams.parcelNumber = undefined;
-      }
-      // Default case - general search term
-      else {
-        // Treat as address search with wildcards for partial matching
-        newParams.address = searchText;
-        newParams.parcelNumber = undefined;
+      // Advanced pattern recognition based on previously detected type
+      switch (detectedSearchType) {
+        case SearchType.PARCEL_NUMBER:
+          // Looks like a parcel number format - normalize by removing spaces
+          newParams.parcelNumber = searchText.replace(/\s+/g, '');
+          newParams.address = undefined;
+          newParams.zipCode = undefined;
+          break;
+          
+        case SearchType.HOUSE_NUMBER:
+          // It's just a number - search in both address and parcel with wildcards
+          newParams.address = searchText; // Will match house numbers
+          newParams.parcelNumber = undefined;
+          newParams.zipCode = undefined;
+          break;
+          
+        case SearchType.STREET_NAME:
+        case SearchType.ADDRESS:
+          // Looks like a street name with suffix
+          newParams.address = searchText;
+          newParams.parcelNumber = undefined;
+          newParams.zipCode = undefined;
+          break;
+          
+        case SearchType.ZIP_CODE:
+          newParams.zipCode = searchText;
+          newParams.address = undefined;
+          newParams.parcelNumber = undefined;
+          break;
+          
+        case SearchType.GENERAL:
+        default:
+          // Treat as address search with wildcards for partial matching
+          newParams.address = searchText;
+          newParams.parcelNumber = undefined;
+          newParams.zipCode = undefined;
+          break;
       }
     } else {
       // Clear search if empty
