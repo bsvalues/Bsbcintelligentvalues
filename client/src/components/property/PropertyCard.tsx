@@ -1,44 +1,48 @@
 import React from 'react';
 import { Link } from 'wouter';
-import { PropertyData } from '../../hooks/usePropertyData';
-import { Card, CardContent, CardFooter, CardHeader } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Skeleton } from '../ui/skeleton';
 import { 
   Home, 
   MapPin, 
-  CalendarDays, 
-  Square, 
+  Calendar, 
   Ruler, 
-  Bath, 
+  DollarSign, 
   Bed, 
-  DollarSign,
-  PenSquare, 
-  Scale,
-  FileText,
-  PlusCircle
+  Bath, 
+  Building, 
+  Square,
+  ArrowRight, 
+  Edit, 
+  Eye
 } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
+import { Property } from '../../hooks/usePropertyData';
 
 export interface PropertyCardProps {
-  property: PropertyData;
-  showCompareButton?: boolean;
-  showAppealButton?: boolean;
-  showDetailsButton?: boolean;
-  onCompare?: (property: PropertyData) => void;
-  onAppeal?: (property: PropertyData) => void;
+  property: Property;
+  viewMode?: 'compact' | 'full';
+  onEdit?: (property: Property) => void;
+  onView?: (property: Property) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ 
   property, 
-  showCompareButton = false,
-  showAppealButton = false,
-  showDetailsButton = true,
-  onCompare,
-  onAppeal
+  viewMode = 'full',
+  onEdit,
+  onView
 }) => {
   // Format currency
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -46,224 +50,220 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     }).format(value);
   };
   
-  // Format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  };
-  
-  // Determine status badge color
-  const getStatusBadgeVariant = (status?: string) => {
-    switch (status) {
-      case 'active': return 'default';
-      case 'pending': return 'warning';
-      case 'sold': return 'success';
-      case 'off-market': return 'secondary';
-      default: return 'outline';
-    }
-  };
-
-  // Handle compare button click
-  const handleCompare = () => {
-    if (onCompare) {
-      onCompare(property);
-    }
-  };
-
-  // Handle appeal button click
-  const handleAppeal = () => {
-    if (onAppeal) {
-      onAppeal(property);
-    }
-  };
-  
-  return (
-    <Card className="overflow-hidden h-full flex flex-col">
-      <CardHeader className="p-0 relative">
-        <div className="h-48 bg-muted flex items-center justify-center">
-          {property.photos && property.photos.length > 0 ? (
-            <img
-              src={property.photos[0]}
-              alt={`Property at ${property.address}`}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Home className="h-16 w-16 text-muted-foreground" />
-          )}
-        </div>
-        {property.status && (
-          <Badge 
-            variant={getStatusBadgeVariant(property.status) as any}
-            className="absolute top-2 right-2"
-          >
-            {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
-          </Badge>
-        )}
-      </CardHeader>
-      
-      <CardContent className="pt-4 pb-2 flex-grow">
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2">
-              {property.address}
-            </h3>
-            <div className="flex items-center text-sm text-muted-foreground mt-1">
-              <MapPin className="h-3.5 w-3.5 mr-1" />
-              <span>
-                {[property.city, property.state, property.zipCode].filter(Boolean).join(', ')}
-              </span>
-            </div>
+  if (viewMode === 'compact') {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-base">{property.address}</CardTitle>
+            <Badge variant="outline">{property.propertyType}</Badge>
           </div>
-          
+          <CardDescription className="flex items-center">
+            <MapPin className="h-3 w-3 mr-1" />
+            {property.city}, {property.state} {property.zipCode}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex items-center">
-              <DollarSign className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span className="font-medium">{formatCurrency(property.assessedValue)}</span>
+              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+              {formatCurrency(property.price)}
             </div>
             <div className="flex items-center">
-              <Scale className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span className="font-medium">{formatCurrency(property.marketValue)}</span>
+              <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+              Built {property.yearBuilt || 'N/A'}
             </div>
             <div className="flex items-center">
-              <Bed className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{property.bedrooms} bd</span>
+              <Square className="h-4 w-4 mr-1 text-muted-foreground" />
+              {property.squareFeet?.toLocaleString() || 'N/A'} sq ft
             </div>
             <div className="flex items-center">
-              <Bath className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{property.bathrooms} ba</span>
+              <Bed className="h-4 w-4 mr-1 text-muted-foreground" />
+              {property.bedrooms || 'N/A'} bed
+              <Bath className="h-4 w-4 ml-2 mr-1 text-muted-foreground" />
+              {property.bathrooms || 'N/A'} bath
             </div>
-            <div className="flex items-center">
-              <Square className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{property.squareFeet} sqft</span>
-            </div>
-            <div className="flex items-center">
-              <CalendarDays className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{property.yearBuilt}</span>
+          </div>
+        </CardContent>
+        <CardFooter className="pt-2">
+          <div className="flex w-full justify-end gap-2">
+            {onView && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => onView(property)}
+              >
+                <Eye className="h-3 w-3" />
+                View
+              </Button>
+            )}
+            {onEdit && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => onEdit(property)}
+              >
+                <Edit className="h-3 w-3" />
+                Edit
+              </Button>
+            )}
+            {!onView && !onEdit && (
+              <Link href={`/properties/${property.id}`}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-1 w-full"
+                >
+                  <Eye className="h-3 w-3" />
+                  View Details
+                </Button>
+              </Link>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card className="overflow-hidden">
+      {property.photos && property.photos.length > 0 ? (
+        <div 
+          className="h-48 bg-cover bg-center" 
+          style={{ backgroundImage: `url(${property.photos[0]})` }}
+        />
+      ) : (
+        <div className="h-48 bg-muted flex items-center justify-center">
+          <Home className="h-16 w-16 text-muted-foreground opacity-30" />
+        </div>
+      )}
+      
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>{property.address}</CardTitle>
+            <CardDescription className="flex items-center mt-1">
+              <MapPin className="h-3 w-3 mr-1" />
+              {property.city}, {property.state} {property.zipCode}
+            </CardDescription>
+          </div>
+          <Badge variant="secondary" className="font-normal">
+            {property.propertyType || 'Residential'}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="grid grid-cols-2 gap-y-3">
+          <div className="flex items-center">
+            <DollarSign className="h-5 w-5 mr-2 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{formatCurrency(property.price)}</div>
+              <div className="text-xs text-muted-foreground">Assessed Value</div>
             </div>
           </div>
           
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground pb-1">
-              <span>Tax Year: {property.taxYear}</span>
-              <span>Parcel: {property.parcelNumber}</span>
+          <div className="flex items-center">
+            <Calendar className="h-5 w-5 mr-2 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{property.yearBuilt || 'N/A'}</div>
+              <div className="text-xs text-muted-foreground">Year Built</div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <div className="text-xs text-muted-foreground">Tax Amount</div>
-                <div className="font-medium">{formatCurrency(property.taxAmount)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Last Sale</div>
-                <div className="font-medium">
-                  {property.lastSalePrice 
-                    ? formatCurrency(property.lastSalePrice) 
-                    : 'No sale data'}
-                </div>
-                {property.lastSaleDate && (
-                  <div className="text-xs text-muted-foreground">
-                    {formatDate(property.lastSaleDate)}
-                  </div>
-                )}
-              </div>
+          </div>
+          
+          <div className="flex items-center">
+            <Square className="h-5 w-5 mr-2 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{property.squareFeet?.toLocaleString() || 'N/A'}</div>
+              <div className="text-xs text-muted-foreground">Square Feet</div>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <Building className="h-5 w-5 mr-2 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{property.lotSize?.toLocaleString() || 'N/A'}</div>
+              <div className="text-xs text-muted-foreground">Lot Size</div>
             </div>
           </div>
         </div>
+        
+        <Separator className="my-4" />
+        
+        <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col items-center justify-center">
+            <div className="font-medium text-lg">{property.bedrooms || 'N/A'}</div>
+            <div className="text-xs text-muted-foreground flex items-center">
+              <Bed className="h-3 w-3 mr-1" />
+              Bedrooms
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <div className="font-medium text-lg">{property.bathrooms || 'N/A'}</div>
+            <div className="text-xs text-muted-foreground flex items-center">
+              <Bath className="h-3 w-3 mr-1" />
+              Bathrooms
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <div className="font-medium text-lg">{property.garageSize || 'N/A'}</div>
+            <div className="text-xs text-muted-foreground">Garage</div>
+          </div>
+        </div>
+        
+        {property.description && (
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground">
+              {property.description.slice(0, 150)}
+              {property.description.length > 150 ? '...' : ''}
+            </p>
+          </div>
+        )}
       </CardContent>
       
-      <CardFooter className="flex gap-2 pt-0">
-        {showDetailsButton && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            asChild
-          >
-            <Link href={`/property/${property.id}`}>
-              <FileText className="h-3.5 w-3.5 mr-1" />
-              Details
+      <CardFooter className="flex justify-between border-t pt-4">
+        {property.parcelNumber && (
+          <Badge variant="outline" className="font-normal">
+            Parcel: {property.parcelNumber}
+          </Badge>
+        )}
+        
+        <div className="flex gap-2">
+          {onEdit && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-1"
+              onClick={() => onEdit(property)}
+            >
+              <Edit className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          
+          {onView ? (
+            <Button 
+              className="flex items-center gap-1"
+              onClick={() => onView(property)}
+            >
+              <Eye className="h-4 w-4" />
+              View Details
+            </Button>
+          ) : (
+            <Link href={`/properties/${property.id}`}>
+              <Button className="flex items-center gap-1">
+                <ArrowRight className="h-4 w-4" />
+                View Details
+              </Button>
             </Link>
-          </Button>
-        )}
-        
-        {showCompareButton && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="flex-1"
-            onClick={handleCompare}
-          >
-            <PlusCircle className="h-3.5 w-3.5 mr-1" />
-            Compare
-          </Button>
-        )}
-        
-        {showAppealButton && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="flex-1"
-            onClick={handleAppeal}
-          >
-            <PenSquare className="h-3.5 w-3.5 mr-1" />
-            Appeal
-          </Button>
-        )}
+          )}
+        </div>
       </CardFooter>
     </Card>
   );
 };
 
-export const PropertyCardSkeleton: React.FC = () => {
-  return (
-    <Card className="overflow-hidden h-full flex flex-col">
-      <div className="h-48 bg-muted" />
-      
-      <CardContent className="pt-4 pb-2 flex-grow">
-        <div className="space-y-3">
-          <div>
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-4 w-2/3 mt-1" />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-          </div>
-          
-          <div>
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-4 w-1/3" />
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <div>
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-5 w-full mt-1" />
-              </div>
-              <div>
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-5 w-full mt-1" />
-                <Skeleton className="h-4 w-2/3 mt-1" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex gap-2 pt-0">
-        <Skeleton className="h-9 flex-1" />
-        <Skeleton className="h-9 flex-1" />
-      </CardFooter>
-    </Card>
-  );
-};
+export default PropertyCard;
