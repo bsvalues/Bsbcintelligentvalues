@@ -28,6 +28,7 @@ import {
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { PropertyCard, PropertyCardSkeleton } from './PropertyCard';
 import { DataLoadingState } from '../common/DataLoadingState';
 import { useAppContext } from '../../context/AppContext';
@@ -282,11 +283,18 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                {/* Left icon changes based on detected search type */}
+                <div className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground">
+                  {detectedSearchType !== SearchType.NONE 
+                    ? getSearchTypeIcon(detectedSearchType)
+                    : <Search className="h-4 w-4" />
+                  }
+                </div>
+                
                 <Input
                   type="text"
                   placeholder="Search by address or parcel number..."
-                  className="pl-9"
+                  className={`pl-9 ${detectedSearchType !== SearchType.NONE ? 'pr-9' : ''}`}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   onKeyDown={(e) => {
@@ -295,6 +303,30 @@ export const PropertySearch: React.FC<PropertySearchProps> = ({ onSearch }) => {
                     }
                   }}
                 />
+                
+                {/* Right search type indicator with tooltip */}
+                {detectedSearchType !== SearchType.NONE && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="absolute right-2.5 top-2.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-foreground flex items-center cursor-help">
+                          {detectedSearchType === SearchType.PARCEL_NUMBER && 'Parcel'}
+                          {detectedSearchType === SearchType.HOUSE_NUMBER && 'House #'}
+                          {detectedSearchType === SearchType.STREET_NAME && 'Street'}
+                          {detectedSearchType === SearchType.ZIP_CODE && 'ZIP'}
+                          {detectedSearchType === SearchType.ADDRESS && 'Address'}
+                          {detectedSearchType === SearchType.GENERAL && 'Text'}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-sm">
+                        <p>{getSearchTypeDescription(detectedSearchType)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Search will be optimized for this content type
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
             
